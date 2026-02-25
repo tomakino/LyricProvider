@@ -16,6 +16,8 @@ fun NetResponseCache.toRichLyric(): List<RichLyricLine> {
     val translationLines = parserTypeLyric(translation?.type, translation?.content)?.normalize()
 
     return lines.map { line ->
+        val translation = translationLines?.findClosest(line.begin, 50)?.text
+
         RichLyricLine(
             begin = line.begin,
             end = line.end,
