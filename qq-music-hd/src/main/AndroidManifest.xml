@@ -19,7 +19,7 @@
             android:value="true" />
         <meta-data
             android:name="lyricon_module_author"
-            android:value="Tomakino" />
+            android:value="GreenTeodoro839" />
         <meta-data
             android:name="lyricon_module_description"
             android:value="@string/lyricon_module_description" />
