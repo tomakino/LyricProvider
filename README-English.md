@@ -14,18 +14,19 @@ music applications.
 
 ### Core Integrations (Global & Major)
 
-| Platform                   | Identifier          | Capabilities                           |
-|:---------------------------|:--------------------|:---------------------------------------|
+| Platform                  | Identifier          | Capabilities                           |
+| :------------------------ | :------------------ | :------------------------------------- |
 | 🎧 **Spotify**             | `spotify-music`     | Standard lyrics (static)               |
 | 🍎 **Apple Music**         | `apple-music`       | Dynamic lyrics, Translations           |
 | ☁️ **NetEase Cloud Music** | `163-music`         | Dynamic lyrics, Translations           |
 | 🐧 **QQ Music**            | `qq-music`          | Dynamic lyrics, Translations           |
-| ⚡ **Poweramp**             | `poweramp-music`    | Online matching & Embedded lyrics      |
+| 🐧 **QQ Music HD**         | `qq-music-hd`       | Dynamic lyrics, Translations           |
+| ⚡ **Poweramp**            | `poweramp-music`    | Online matching & Embedded lyrics      |
 | 🧊 **LX Music**            | `lx-music`          | Lyric translations                     |
 | 🐶 **Kugou / Lite**        | `kugou-music`       | **Requires "Car Mode" enabled in-app** |
 | 📻 **Kuwo Music**          | `kuwo-music`        | **Requires "Car Mode" enabled in-app** |
 | 🧂 **Salt Player**         | `salt-player-music` | Uses Flyme (Meizu) Lyric standard      |
-| 🎵 **汽水音乐**                | `qishui-music`      | Dynamic lyrics, Translations           |
+| 🎵 **汽水音乐**            | `qishui-music`      | Dynamic lyrics, Translations           |
 
 ### Universal & Special Modules
 

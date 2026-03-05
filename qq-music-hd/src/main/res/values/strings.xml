@@ -1,0 +1,12 @@
+<!--
+  ~ Copyright 2026 Proify, Tomakino
+  ~ Licensed under the Apache License, Version 2.0
+  ~ http://www.apache.org/licenses/LICENSE-2.0
+  -->
+
+<resources>
+    <string name="app_name">QQ音乐HD歌词提供</string>
+
+    <string name="xposed_description">为词幕提供QQ音乐HD歌词</string>
+    <string name="lyricon_module_description">提供QQ音乐HD歌词。</string>
+</resources>
