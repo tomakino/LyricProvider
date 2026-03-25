@@ -99,8 +99,9 @@ object EnhanceLrcParser {
         }
 
         val words = parseWords(text)
+        // **** 关键修改：单词之间添加空格，使英文显示正常 ****
         val plainText = if (words.isNotEmpty()) {
-            words.joinToString("") { it.text ?: "" }
+            words.joinToString(" ") { it.text ?: "" }
         } else {
             text
         }
