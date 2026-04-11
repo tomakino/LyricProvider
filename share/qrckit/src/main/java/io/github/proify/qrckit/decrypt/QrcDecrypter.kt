@@ -17,6 +17,7 @@ object QrcDecrypter {
 
     fun decrypt(encrypted: String?): String? {
         if (encrypted.isNullOrBlank()) return null
+        if (!isHexString(encrypted)) return encrypted
 
         return runCatching {
             val encryptedBytes = hexStringToByteArray(encrypted)
