@@ -63,6 +63,7 @@ configure<ApplicationExtension> {
 
 dependencies {
     implementation(project(":share:extensions-android"))
+    implementation(libs.okhttp)
 
     implementation(libs.lyricon.provider)
     implementation(libs.kotlinx.serialization.json)

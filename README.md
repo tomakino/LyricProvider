@@ -52,7 +52,8 @@
 ## 📥 快速安装
 
 > [!IMPORTANT]
-> 本插件属于扩展组件，必须配合 **[词幕](https://github.com/tomakino/lyricon)** 主程序方可运行。
+> 本插件属于扩展组件，必须配合 **[词幕Core](https://github.com/tomakino/lyricon/releases/tag/core)**
+> 方可运行。
 
 1. **下载**：前往 [Releases 页面](https://github.com/tomakino/LyricProvider/releases) 获取最新的 APK
    安装包。

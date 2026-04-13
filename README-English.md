@@ -53,7 +53,7 @@ The following players have natively integrated this protocol and can be used dir
 
 > [!IMPORTANT]
 > This plugin is an extension component and must be used together with the *
-*[Lyricon](https://github.com/tomakino/lyricon)** main application.
+*[LyriconCore](https://github.com/tomakino/lyricon/releases/tag/core)** main application.
 
 1. **Download**: Go to the [Releases page](https://github.com/tomakino/LyricProvider/releases) and
    get the latest APK.

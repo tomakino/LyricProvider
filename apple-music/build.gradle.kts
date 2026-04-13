@@ -22,8 +22,8 @@ configure<ApplicationExtension> {
         applicationId = "io.github.proify.lyricon.amprovider"
         minSdk = 28
         targetSdk = 36
-        versionCode = 4
-        versionName = "1.0.10"
+        versionCode = 5
+        versionName = "1.0.20"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

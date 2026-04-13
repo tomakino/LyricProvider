@@ -69,6 +69,7 @@ open class KuGou(val tag: String = "KuGouProvider") : YukiBaseHooker() {
             }.hook {
                 after {
                     val metadata = args[0] as? MediaMetadata ?: return@after
+
                     val title = metadata.getString(MediaMetadata.METADATA_KEY_TITLE)
                     if (!title.isNullOrBlank()) {
                         lyriconProvider?.player?.sendText(title)

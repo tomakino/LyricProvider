@@ -6,9 +6,11 @@
 
 package io.github.proify.lyricon.amprovider.xposed
 
+import android.util.Log
 import com.highcapable.yukihookapi.hook.log.YLog
 import io.github.proify.lyricon.lyric.model.Song
 import io.github.proify.lyricon.provider.RemotePlayer
+import kotlin.system.measureTimeMillis
 
 object PlaybackManager {
     private var player: RemotePlayer? = null
@@ -61,8 +63,16 @@ object PlaybackManager {
             return
         }
         val id = song.id
+        val isSongSame by lazy {
+            var same = false
+            val time = measureTimeMillis {
+                same = lastSong != song
+            }
+            Log.d("PlaybackManager", "Same song check took $time ms.")
+            return@lazy same
+        }
 
-        if (id == currentSongId && lastSong?.lyrics.isNullOrEmpty()) {
+        if (id == currentSongId && isSongSame) {
             YLog.debug("PlaybackManager: Lyrics ready for current song $id, updating player.")
             setSong(song)
         } else {
