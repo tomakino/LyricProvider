@@ -6,4 +6,4 @@
 
 package io.github.proify.lyricon.kgprovider.xposed.kugou
 
-class KuGouLite : KuGou("KuGouLiteProvider")
+class KuGouLite : KuGou()
