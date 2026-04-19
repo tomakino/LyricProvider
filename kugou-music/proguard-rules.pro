@@ -1,24 +1,25 @@
-# Add project specific ProGuard rules here.
-# You can control the set of applied configuration files using the
-# proguardFiles setting in build.gradle.
-#
-# For more details, see
-#   http://developer.android.com/guide/developing/tools/proguard.html
+# 保留模块所有类
+-keep class io.github.proify.lyricon.kgprovider.** { *; }
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
+# 保留 YukiHookAPI
+-keep class com.highcapable.yukihookapi.** { *; }
 
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
+# 保留 Xposed 入口
+-keep class io.github.proify.lyricon.kgprovider.xposed.HookEntry
+-keep class io.github.proify.lyricon.kgprovider.xposed.kugou.KuGouBase
+-keep class io.github.proify.lyricon.kgprovider.xposed.kugou.KuGou
+-keep class io.github.proify.lyricon.kgprovider.xposed.kugou.KuGouLite
+-keep class io.github.proify.lyricon.kgprovider.xposed.kugou.LyricsCache
+-keep class io.github.proify.lyricon.kgprovider.xposed.kugou.KuGouVersionConfig
+-keep class io.github.proify.lyricon.kgprovider.xposed.kugou.KuGouVersionConfig$*
 
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
+# 保留 Kotlin 元数据
+-keep class kotlin.Metadata { *; }
+-keepattributes Signature, InnerClasses, EnclosingMethod, RuntimeVisibleAnnotations, RuntimeVisibleParameterAnnotations
 
+# 忽略警告
 -dontwarn java.lang.reflect.AnnotatedType
--repackageclasses ''
+
+# 保留行号信息
+-keepattributes SourceFile,LineNumberTable
+-renamesourcefileattribute SourceFile
