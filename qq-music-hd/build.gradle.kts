@@ -13,12 +13,13 @@ plugins {
 
 configure<ApplicationExtension> {
     namespace = "io.github.proify.lyricon.qmhdprovider"
-    compileSdk { version = release(36) }
-
+    compileSdk {
+        version = release(rootProject.extra.get("compileSdkVersion") as Int)
+    }
     defaultConfig {
         applicationId = "io.github.proify.lyricon.qmhdprovider"
         minSdk = 27
-        targetSdk = 36
+        targetSdk = rootProject.extra.get("targetSdkVersion") as Int
         versionCode = 1
         versionName = "1.0.0"
 

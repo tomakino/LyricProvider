@@ -8,47 +8,76 @@ package io.github.proify.lyricon.kgprovider.xposed.kugou
 
 import android.media.MediaMetadata
 import android.media.session.PlaybackState
-import android.util.Log
+import com.highcapable.kavaref.KavaRef.Companion.resolve
 import com.highcapable.yukihookapi.hook.entity.YukiBaseHooker
+import com.highcapable.yukihookapi.hook.log.YLog
+import de.robv.android.xposed.XC_MethodHook
+import de.robv.android.xposed.XposedBridge
+import io.github.proify.extensions.toRichLyricLines
+import io.github.proify.lrckit.LrcParser
 import io.github.proify.lyricon.kgprovider.xposed.Constants
+import io.github.proify.lyricon.krckit.KrcDecryptor
+import io.github.proify.lyricon.krckit.KrcParser
 import io.github.proify.lyricon.lyric.model.RichLyricLine
 import io.github.proify.lyricon.lyric.model.Song
 import io.github.proify.lyricon.provider.LyriconFactory
 import io.github.proify.lyricon.provider.LyriconProvider
 import io.github.proify.lyricon.provider.ProviderLogo
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import org.luckypray.dexkit.DexKitBridge
+import java.io.File
+import java.lang.reflect.Method
 
-@Suppress("TooManyFunctions", "LongMethod", "ComplexMethod")
+/**
+ * 酷狗音乐基础 Hook 架构类
+ * 负责 MediaSession 状态同步、歌词文件拦截与 Provider 生命周期管理
+ */
 abstract class KuGouBase : YukiBaseHooker() {
 
-    protected val tag = "KuGouProvider"
+    companion object {
+        protected const val TAG = "KuGouProvider"
+    }
+
+    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     protected var provider: LyriconProvider? = null
+
     protected var currentSongId: String? = null
-    protected var currentSongTitle: String = ""
-    protected var currentSongArtist: String = ""
-    protected var currentLyricsHash: Int = 0
-    protected var lastLyricDataHash: Int = 0
-    protected var pendingLyrics: List<RichLyricLine>? = null
-    protected var isInitialized = false
+    private var lastEmittedSong: Song? = null
+    private var isInitialized = false
+    protected lateinit var dexKitBridge: DexKitBridge
+        private set
+
+    init {
+        System.loadLibrary("dexkit")
+    }
 
     override fun onHook() {
-        if (shouldHookProcess()) {
-            hookLyricDataSetters()
-            hookMediaSession()
-            onAppLifecycle {
-                onCreate {
-                    initProvider()
-                }
+        if (!shouldHookProcess()) return
+        dexKitBridge = DexKitBridge.create(appInfo.sourceDir)
+        hookMediaSession()
+        scope.launch { asyncHookLyricManager() }
+
+        onAppLifecycle {
+            onCreate {
+                initProvider()
+                onAppCreate()
             }
         }
     }
-    
+
+    protected abstract fun onAppCreate()
     protected abstract fun shouldHookProcess(): Boolean
 
+    /**
+     * 初始化 Lyricon Provider
+     */
     private fun initProvider() {
         if (isInitialized) return
         val ctx = appContext ?: return
-        isInitialized = true
 
         try {
             provider = LyriconFactory.createProvider(
@@ -60,296 +89,184 @@ abstract class KuGouBase : YukiBaseHooker() {
                 register()
                 player.setDisplayTranslation(true)
             }
+            isInitialized = true
+            YLog.info(msg = "Lyricon Provider initialized for ${ctx.packageName}", tag = TAG)
         } catch (e: Exception) {
-            Log.e(tag, "initProvider failed: ${e.message}")
+            YLog.error(msg = "Failed to init provider: ${e.message}", tag = TAG)
         }
     }
 
-    protected fun hookLyricDataSetters() {
-        runCatching {
-            val lyricDataClass = "com.kugou.framework.lyric.LyricData".toClass(appClassLoader) ?: return@runCatching
+    private fun asyncHookLyricManager() {
 
-            val config = KuGouVersionConfig.DEFAULT_METHOD_CONFIG
-            var hookedBeginTimes = false
-            var hookedEndTimes = false
-            var hookedOriginalTexts = false
-            var hookedTranslation = false
-            var stringArrayMethodCount = 0
+        fun findLoadLyricMethodFromDexKit(): Method? {
+            val methodData = dexKitBridge
+                .findClass {
+                    matcher {
+                        className = "com.kugou.framework.lyric.LyricManager"
+                    }
+                }
+                .findMethod {
+                    matcher {
+                        addUsingString("file is not krc or lyc or txt file")
+                        paramTypes(String::class.java, Boolean::class.javaPrimitiveType)
+                    }
+                }.singleOrNull()
+            return methodData?.getMethodInstance(appClassLoader!!)
+        }
 
-            lyricDataClass.declaredMethods.forEach { method ->
-                if (method.parameterCount != 1) return@forEach
-                val paramType = method.parameterTypes[0]
-                val paramTypeName = paramType.name
+//        fun findLoadLyricMethodFromReflection(): Method? {
+//            val clazz = "com.kugou.framework.lyric.LyricManager".toClass()
+//            val methods = clazz.methods
+//            return methods.find {
+//                val modifiers = it.modifiers
+//                val isPublic = java.lang.reflect.Modifier.isPublic(modifiers)
+//                val isStatic = java.lang.reflect.Modifier.isStatic(modifiers)
+//
+//                !isStatic && isPublic && it.parameterTypes.contentEquals(
+//                    arrayOf(
+//                        String::class.java,
+//                        Boolean::class.javaPrimitiveType
+//                    )
+//                )
+//            }
+//        }
 
-                when {
-                    method.name in config.beginTimesMethods && paramType == LongArray::class.java -> {
-                        hookBeginTimesMethod(method)
-                        hookedBeginTimes = true
-                    }
-                    method.name in config.endTimesMethods && paramType == LongArray::class.java -> {
-                        hookEndTimesMethod(method)
-                        hookedEndTimes = true
-                    }
-                    method.name in config.originalTextsMethods -> {
-                        hookOriginalTextsMethod(method)
-                        hookedOriginalTexts = true
-                    }
-                    method.name in config.translationMethods && paramTypeName.contains("String") -> {
-                        hookTranslationMethod(method)
-                        hookedTranslation = true
-                    }
-                    paramType == LongArray::class.java && !hookedBeginTimes -> {
-                        hookBeginTimesMethod(method)
-                        hookedBeginTimes = true
-                    }
-                    paramType == LongArray::class.java && !hookedEndTimes -> {
-                        hookEndTimesMethod(method)
-                        hookedEndTimes = true
-                    }
-                    paramTypeName == "[[Ljava.lang.String;" -> {
-                        stringArrayMethodCount++
-                        if (!hookedOriginalTexts) {
-                            hookOriginalTextsMethod(method)
-                            hookedOriginalTexts = true
-                        } else if (!hookedTranslation) {
-                            hookTranslationMethod(method)
-                            hookedTranslation = true
-                        } else {
-                            hookAllStringArrayMethod(method)
+        val method = findLoadLyricMethodFromDexKit()
+
+        XposedBridge.hookMethod(method, object : XC_MethodHook() {
+            override fun afterHookedMethod(param: MethodHookParam?) {
+                val args = param?.args ?: return
+                val path = args[0] as? String ?: return
+                processLyricFileAsync(path)
+            }
+        })
+    }
+
+    /**
+     * 异步解析歌词文件，避免阻塞主线程或 Hook 回调
+     * @param path KRC 文件绝对路径
+     */
+    private fun processLyricFileAsync(path: String) {
+        scope.launch {
+            try {
+                val file = File(path)
+                if (!file.exists()) return@launch
+                when (file.extension) {
+                    "krc" -> {
+                        val raw = file.readBytes()
+                        val decrypted = KrcDecryptor.decrypt(raw)
+                        val document = KrcParser.parse(decrypted)
+                        val lyrics = document.richLyricLines
+
+                        if (lyrics.isNotEmpty()) {
+                            currentSongId?.let { LyricsCache.put(it, lyrics) }
+                            onReceiveLyrics(lyrics)
                         }
                     }
-                }
-            }
-        }.onFailure { e ->
-            Log.e(tag, "hookLyricDataSetters failed: ${e.message}")
-        }
-    }
-    
-    private fun hookBeginTimesMethod(method: java.lang.reflect.Method) {
-        method.hook {
-            after {
-                tryBuildLyricsFromFields(this.instance)
-            }
-        }
-    }
-    
-    private fun hookEndTimesMethod(method: java.lang.reflect.Method) {
-        method.hook {
-            after {
-                tryBuildLyricsFromFields(this.instance)
-            }
-        }
-    }
-    
-    private fun hookOriginalTextsMethod(method: java.lang.reflect.Method) {
-        method.hook {
-            after {
-                tryBuildLyricsFromFields(this.instance)
-            }
-        }
-    }
-    
-    private fun hookTranslationMethod(method: java.lang.reflect.Method) {
-        method.hook {
-            after {
-                tryBuildLyricsFromFields(this.instance, forceRebuild = true)
-            }
-        }
-    }
-    
-    private fun hookAllStringArrayMethod(method: java.lang.reflect.Method) {
-        method.hook {
-            after {
-                tryBuildLyricsFromFields(this.instance, forceRebuild = true)
-            }
-        }
-    }
 
-    @Suppress("NestedBlockDepth", "CyclomaticComplexMethod")
-    protected fun tryBuildLyricsFromFields(lyricData: Any, forceRebuild: Boolean = false) {
-        runCatching {
-            val hash = System.identityHashCode(lyricData)
-            if (hash == lastLyricDataHash && !forceRebuild) {
-                return
-            }
+                    "lrc" -> {
+                        val raw = file.readText()
+                        val document = LrcParser.parse(raw)
+                        val lyrics = document.lines.toRichLyricLines()
 
-            var beginTimes: LongArray? = null
-            var endTimes: LongArray? = null
-            @Suppress("UNCHECKED_CAST")
-            var originalTexts: Array<Array<String>>? = null
-            @Suppress("UNCHECKED_CAST")
-            var translationTexts: Array<Array<String>>? = null
-
-            for (config in KuGouVersionConfig.FIELD_CONFIGS) {
-                beginTimes = null
-                endTimes = null
-                originalTexts = null
-                translationTexts = null
-                
-                lyricData.javaClass.declaredFields.forEach { field ->
-                    field.isAccessible = true
-                    val value = field.get(lyricData)
-                    val fieldName = field.name
-                    
-                    @Suppress("UNCHECKED_CAST")
-                    when (fieldName) {
-                        in config.beginTimesFields -> beginTimes = value as? LongArray
-                        in config.endTimesFields -> endTimes = value as? LongArray
-                        in config.originalTextsFields -> originalTexts = value as? Array<Array<String>>
-                        in config.translationFields -> translationTexts = value as? Array<Array<String>>
-                    }
-                }
-                
-                if (beginTimes != null && originalTexts != null && beginTimes.isNotEmpty()) {
-                    break
-                }
-            }
-
-            if (beginTimes != null && originalTexts != null && beginTimes.isNotEmpty()) {
-                lastLyricDataHash = hash
-
-                val lines = mutableListOf<RichLyricLine>()
-                val size = minOf(beginTimes.size, originalTexts.size)
-
-                for (i in 0 until size) {
-                    val begin = beginTimes[i]
-                    var end = if (endTimes != null && i < endTimes.size) endTimes[i] else 0L
-
-                    if (end <= begin) {
-                        end = if (i + 1 < beginTimes.size) beginTimes[i + 1] else begin + 5000L
-                    }
-
-                    val textArray = originalTexts[i]
-                    val text = textArray?.joinToString("") ?: ""
-
-                    if (text.isNotBlank()) {
-                        var translation: String? = null
-                        if (translationTexts != null && i < translationTexts.size) {
-                            val transArray = translationTexts[i]
-                            if (transArray != null && transArray.isNotEmpty()) {
-                                translation = transArray.joinToString("")
-                            }
-                        }
-
-                        lines.add(RichLyricLine(
-                            begin = begin,
-                            end = end,
-                            duration = if (end > begin) end - begin else 0L,
-                            text = text,
-                            translation = translation
-                        ))
-                    }
-                }
-
-                if (lines.isNotEmpty()) {
-                    val sortedLines = lines.sortedBy { it.begin }
-                    sendLyrics(sortedLines)
-                }
-            }
-        }.onFailure { e ->
-            Log.e(tag, "tryBuildLyricsFromFields failed: ${e.message}")
-        }
-    }
-
-    protected fun hookMediaSession() {
-        runCatching {
-            val mediaSessionClass = "android.media.session.MediaSession".toClass(appClassLoader) ?: return@runCatching
-
-            mediaSessionClass.declaredMethods.forEach { method ->
-                if (method.name == "setMetadata" && method.parameterCount == 1) {
-                    method.hook {
-                        after {
-                            val metadata = args[0] as? MediaMetadata ?: return@after
-                            handleMetadataChange(metadata)
+                        if (lyrics.isNotEmpty()) {
+                            currentSongId?.let { LyricsCache.put(it, lyrics) }
+                            onReceiveLyrics(lyrics)
                         }
                     }
+
+                    else -> return@launch
                 }
 
-                if (method.name == "setPlaybackState" && method.parameterCount == 1) {
-                    method.hook {
-                        after {
-                            val state = args[0] as? PlaybackState
-                            provider?.player?.setPlaybackState(state)
-                        }
-                    }
-                }
+            } catch (e: Exception) {
+                YLog.error(tag = TAG, msg = "Lyric parsing failed: ${e.message}")
             }
-        }.onFailure { e ->
-            Log.e(tag, "hookMediaSession failed: ${e.message}")
         }
     }
 
-    protected open fun handleMetadataChange(metadata: MediaMetadata) {
-        val rawTitle = metadata.getString(MediaMetadata.METADATA_KEY_TITLE) ?: return
+    private fun hookMediaSession() {
+        "android.media.session.MediaSession".toClass()
+            .resolve().apply {
+                firstMethod {
+                    name = "setPlaybackState"
+                    parameters(PlaybackState::class.java)
+                }.hook {
+                    after {
+                        val state = args[0] as? PlaybackState
+                        provider?.player?.setPlaybackState(state)
+                    }
+                }
+
+                firstMethod {
+                    name = "setMetadata"
+                    parameters(MediaMetadata::class.java)
+                }.hook {
+                    after {
+                        val metadata = args[0] as? MediaMetadata ?: return@after
+                        handleMetadataChange(metadata)
+                    }
+                }
+            }
+    }
+
+    /**
+     * 处理元数据变更
+     */
+    private fun handleMetadataChange(metadata: MediaMetadata) {
+        val title = metadata.getString(MediaMetadata.METADATA_KEY_TITLE) ?: return
         val artist = metadata.getString(MediaMetadata.METADATA_KEY_ARTIST) ?: ""
         val album = metadata.getString(MediaMetadata.METADATA_KEY_ALBUM) ?: ""
         val duration = metadata.getLong(MediaMetadata.METADATA_KEY_DURATION)
-        
-        val songId = "$rawTitle|$artist|$album|$duration"
-        
-        if (songId == currentSongId) return
-        
-        currentSongId = songId
-        currentSongTitle = rawTitle
-        currentSongArtist = artist
 
-        Log.i(tag, "New song: $rawTitle - $artist (${duration}ms)")
-        
-        currentLyricsHash = 0
-        lastLyricDataHash = 0
-        
-        val cached = LyricsCache.get(songId)
-        if (cached != null) {
-            currentLyricsHash = cached.hashCode()
-            lastLyricDataHash = 0
-            
-            provider?.player?.setSong(Song(
-                id = songId,
-                name = currentSongTitle,
-                artist = currentSongArtist,
-                duration = 0,
-                lyrics = cached
-            ))
-            return
-        }
-        
-        pendingLyrics?.let { lyrics ->
-            sendLyrics(lyrics)
-            pendingLyrics = null
+        val meta = MetadataData(title, artist, album, duration)
+        val songId = meta.generateId
+
+        if (songId == currentSongId) return
+        currentSongId = songId
+
+        MetadataDataManager.put(meta)
+        //YLog.info(tag = TAG, msg = "Track Changed: $title - $artist")
+
+        // 尝试从缓存获取歌词
+        LyricsCache.get(songId)?.let {
+            sendLyrics(it)
         }
     }
 
-    protected open fun sendLyrics(lyrics: List<RichLyricLine>) {
-        val hash = lyrics.hashCode()
-        if (hash == currentLyricsHash) return
+    /**
+     * 接收到解析完成的歌词
+     */
+    private fun onReceiveLyrics(lyrics: List<RichLyricLine>) {
+        if (currentSongId.isNullOrBlank()) return
+        sendLyrics(lyrics)
+    }
 
-        if (currentSongId.isNullOrEmpty()) {
-            pendingLyrics = lyrics
-            return
-        }
+    private fun sendLyrics(lyrics: List<RichLyricLine>) {
+        val id = currentSongId ?: return
+        val meta = MetadataDataManager.get(id) ?: return
 
-        currentLyricsHash = hash
-        
-        LyricsCache.put(currentSongId!!, lyrics)
+        val finalDuration = if (meta.duration <= 0) {
+            lyrics.lastOrNull()?.end ?: 0L
+        } else meta.duration
 
         val song = Song(
-            id = currentSongId!!,
-            name = currentSongTitle,
-            artist = currentSongArtist,
-            duration = 0,
+            id = id,
+            name = meta.title,
+            artist = meta.artist,
+            duration = finalDuration,
             lyrics = lyrics
         )
 
+        emitSong(song)
+    }
+
+    /**
+     * 最终提交歌曲变更，包含去重校验
+     */
+    private fun emitSong(song: Song) {
+        if (lastEmittedSong == song) return
+        lastEmittedSong = song
         provider?.player?.setSong(song)
-        
-        Log.i(tag, "=== Lyrics (${lyrics.size} lines) ===")
-        lyrics.forEach { line ->
-            if (line.translation != null) {
-                Log.i(tag, "${line.text} | ${line.translation}")
-            } else {
-                Log.i(tag, line.text ?: "")
-            }
-        }
-        Log.i(tag, "=== End Lyrics ===")
+        YLog.info(tag = TAG, msg = "Successfully pushed song to Provider: ${song.name}")
     }
 }

@@ -15,15 +15,13 @@ plugins {
 configure<ApplicationExtension> {
     namespace = "io.github.proify.lyricon.cmprovider"
     compileSdk {
-        version = release(36) {
-            minorApiLevel = 1
-        }
+        version = release(rootProject.extra.get("compileSdkVersion") as Int)
     }
 
     defaultConfig {
         applicationId = "io.github.proify.lyricon.cmprovider"
         minSdk = 28
-        targetSdk = 36
+        targetSdk = rootProject.extra.get("targetSdkVersion") as Int
         versionCode = 7
         versionName = "1.0.5-beta1"
 

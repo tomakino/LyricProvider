@@ -9,10 +9,11 @@ package io.github.proify.lyricon.kgprovider.xposed
 import com.highcapable.yukihookapi.YukiHookAPI
 import com.highcapable.yukihookapi.annotation.xposed.InjectYukiHookWithXposed
 import com.highcapable.yukihookapi.hook.xposed.proxy.IYukiHookXposedInit
+import io.github.proify.lyricon.kgprovider.xposed.Constants.PROVIDER_PACKAGE_NAME
 import io.github.proify.lyricon.kgprovider.xposed.kugou.KuGou
 import io.github.proify.lyricon.kgprovider.xposed.kugou.KuGouLite
 
-@InjectYukiHookWithXposed(modulePackageName = "io.github.proify.lyricon.kgprovider")
+@InjectYukiHookWithXposed(modulePackageName = PROVIDER_PACKAGE_NAME)
 open class HookEntry : IYukiHookXposedInit {
 
     override fun onHook() {

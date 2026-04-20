@@ -22,7 +22,7 @@
 
         <meta-data
             android:name="lyricon_module_author"
-            android:value="Tomakino" />
+            android:value="Tomakino,QFDY-GZC" />
 
         <meta-data
             android:name="lyricon_module_description"

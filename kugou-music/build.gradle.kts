@@ -1,3 +1,9 @@
+/*
+ * Copyright 2026 Proify, Tomakino
+ * Licensed under the Apache License, Version 2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
+ */
+
 import com.android.build.api.dsl.ApplicationExtension
 
 plugins {
@@ -8,15 +14,15 @@ plugins {
 configure<ApplicationExtension> {
     namespace = "io.github.proify.lyricon.kgprovider"
     compileSdk {
-        version = release(36)
+        version = release(rootProject.extra.get("compileSdkVersion") as Int)
     }
 
     defaultConfig {
         applicationId = "io.github.proify.lyricon.kgprovider"
         minSdk = 27
-        targetSdk = 36
-        versionCode = 4
-        versionName = "1.0.0"
+        targetSdk = rootProject.extra.get("targetSdkVersion") as Int
+        versionCode = 5
+        versionName = "1.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -55,10 +61,22 @@ configure<ApplicationExtension> {
 }
 
 dependencies {
-    implementation("com.highcapable.yukihookapi:api:1.3.1")
-    compileOnly("de.robv.android.xposed:api:82")
-    ksp("com.highcapable.yukihookapi:ksp-xposed:1.3.1")
+    implementation(project(":share:extensions-android"))
+    implementation(project(":share:lrckit"))
+    implementation(project(":share:krckit"))
 
-    implementation("io.github.proify.lyricon:provider:0.1.69")
-    implementation("io.github.proify.lyricon.lyric:model:0.1.68")
+    implementation(libs.dexkit)
+    implementation(libs.lyricon.provider)
+    implementation(libs.kotlinx.serialization.json)
+
+    implementation(libs.yukihookapi.api)
+    implementation(libs.kavaref.core)
+    implementation(libs.kavaref.extension)
+    compileOnly(libs.xposed.api)
+    ksp(libs.yukihookapi.ksp.xposed)
+
+    implementation(libs.androidx.core.ktx)
+    testImplementation(libs.junit)
+    androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation(libs.androidx.espresso.core)
 }

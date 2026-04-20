@@ -15,13 +15,13 @@ plugins {
 configure<ApplicationExtension> {
     namespace = "io.github.proify.lyricon.qmprovider"
     compileSdk {
-        version = release(36)
+        version = release(rootProject.extra.get("compileSdkVersion") as Int)
     }
 
     defaultConfig {
         applicationId = "io.github.proify.lyricon.qmprovider"
         minSdk = 27
-        targetSdk = 36
+        targetSdk = rootProject.extra.get("targetSdkVersion") as Int
         versionCode = 3
         versionName = "1.0.10"
 

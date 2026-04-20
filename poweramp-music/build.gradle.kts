@@ -17,12 +17,14 @@ plugins {
 
 configure<ApplicationExtension> {
     namespace = "io.github.proify.lyricon.paprovider"
-    compileSdk = 36
+    compileSdk {
+        version = release(rootProject.extra.get("compileSdkVersion") as Int)
+    }
 
     defaultConfig {
         applicationId = "io.github.proify.lyricon.paprovider"
         minSdk = 28
-        targetSdk = 36
+        targetSdk = rootProject.extra.get("targetSdkVersion") as Int
         versionCode = 3
         versionName = "1.0.6"
 

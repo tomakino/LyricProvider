@@ -6,8 +6,23 @@
 
 package io.github.proify.extensions
 
+import io.github.proify.lyricon.lyric.model.RichLyricLine
 import io.github.proify.lyricon.lyric.model.interfaces.ILyricLine
 import kotlin.math.abs
+
+fun List<ILyricLine>.toRichLyricLines(): List<RichLyricLine> {
+    return map {
+        RichLyricLine(
+            begin = it.begin,
+            end = it.end,
+            duration = it.duration,
+            text = it.text,
+            words = it.words,
+            isAlignedRight = it.isAlignedRight,
+            metadata = it.metadata
+        )
+    }
+}
 
 /**
  * 在已排序的列表中查找与 targetBegin 最接近且误差在 tolerance 内的 LyricLine

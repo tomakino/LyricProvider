@@ -15,13 +15,13 @@ plugins {
 configure<ApplicationExtension> {
     namespace = "io.github.proify.lyricon.meizuprovider"
     compileSdk {
-        version = release(36)
+        version = release(rootProject.extra.get("compileSdkVersion") as Int)
     }
 
     defaultConfig {
         applicationId = "io.github.proify.lyricon.meizuprovider"
         minSdk = 27
-        targetSdk = 36
+        targetSdk = rootProject.extra.get("targetSdkVersion") as Int
         versionCode = 2
         versionName = "1.0.0"
 
