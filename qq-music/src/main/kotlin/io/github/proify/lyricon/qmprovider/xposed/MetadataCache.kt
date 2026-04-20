@@ -14,7 +14,7 @@ object MediaMetadataCache {
 
     fun save(metadata: MediaMetadata): Metadata? {
         val id = metadata.getString(MediaMetadata.METADATA_KEY_MEDIA_ID)
-        if (id.isBlank()) return null
+        if (id.isNullOrBlank()) return null
         if (map.containsKey(id)) {
             return map[id]
         }

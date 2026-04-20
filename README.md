@@ -2,6 +2,8 @@
 
 # LyricProvider - 歌词提供器
 
+#### 基于Xposed 的歌词提供器
+
 ![Platform](https://img.shields.io/badge/Platform-Android-brightgreen?style=flat&logo=android)
 ![Release](https://img.shields.io/github/v/release/tomakino/LyricProvider?style=flat&color=blue&logo=github)
 ![Size](https://img.shields.io/github/repo-size/tomakino/LyricProvider)
@@ -40,20 +42,20 @@
 | 📱 **魅族歌词支持** | `meizu-provider` | 适用于已适配魅族状态栏歌词的播放器 |
 | 🧂 **车载歌词支持** | `car-provider`   | 适用于已适配车载歌词适配的播放器  |
 
-### 🚀 原生支持 (无需插件)
+### 🚀 原生支持
 
-以下播放器已原生集成此协议，可直接配合词幕使用：
-
-* **光锥音乐**: [官方主页](https://coneplayer.trantor.ink/)
-* **Flamingo**
+- [**光锥音乐**](https://coneplayer.trantor.ink/)
+- **Flamingo**
+- [**BBPlayer**](https://bbplayer.roitium.com/)
+- **MobiMusic**
+- [**Kanade**](https://github.com/rcmiku/Kanade)
+- **Sollin Player**
+- [**QZ Music**](https://github.com/lqtmcstudio/QZMusic)
 
 ---
 
 ## 📥 快速安装
 
-> [!IMPORTANT]
-> 本插件属于扩展组件，必须配合 **[词幕Core](https://github.com/tomakino/lyricon/releases/tag/core)**
-> 方可运行。
 
 1. **下载**：前往 [Releases 页面](https://github.com/tomakino/LyricProvider/releases) 获取最新的 APK
    安装包。
@@ -68,6 +70,8 @@
 我们非常欢迎社区提交 Pull Request 来适配更多音乐 App。
 
 请阅读 [开发文档](https://github.com/tomakino/lyricon/blob/master/lyric/bridge/provider/README.md)
+
+或者 [订阅歌词](https://github.com/tomakino/lyricon/blob/master/lyric/bridge/subscriber/README.md)
 
 ---
 

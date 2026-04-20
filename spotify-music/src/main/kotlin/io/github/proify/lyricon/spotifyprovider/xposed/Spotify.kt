@@ -91,7 +91,7 @@ object Spotify : YukiBaseHooker(), DownloadCallback {
                         //处理其它通知（比如广告）
                         val title = metadata.getString(MediaMetadata.METADATA_KEY_TITLE)
                         val artist = metadata.getString(MediaMetadata.METADATA_KEY_ARTIST)
-                        if (title.isNotBlank() || artist.isNotBlank()) {
+                        if (title.orEmpty().isNotBlank() || artist.orEmpty().isNotBlank()) {
                             YLog.info(tag = TAG, msg = "Invalid track info, using title and artist")
                             setPlaceholder(title, artist)
                         }
