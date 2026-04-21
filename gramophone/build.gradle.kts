@@ -13,17 +13,17 @@ plugins {
 }
 
 configure<ApplicationExtension> {
-    namespace = "io.github.proify.lyricon.cloudprovider"
+    namespace = "io.github.proify.lyricon.gramophoneprovider"
     compileSdk {
         version = release(rootProject.extra.get("compileSdkVersion") as Int)
     }
 
     defaultConfig {
-        applicationId = "io.github.proify.lyricon.cloudprovider"
+        applicationId = "io.github.proify.lyricon.gramophoneprovider"
         minSdk = 27
         targetSdk = rootProject.extra.get("targetSdkVersion") as Int
-        versionCode = 2
-        versionName = "1.0.1"
+        versionCode = 1
+        versionName = "1.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -63,8 +63,9 @@ configure<ApplicationExtension> {
 
 dependencies {
     implementation(project(":share:extensions-android"))
-    implementation(project(":share:cloudlyric"))
+    implementation(project(":share:lrckit"))
 
+    implementation(libs.taglib)
     implementation(libs.lyricon.provider)
     implementation(libs.kotlinx.serialization.json)
 

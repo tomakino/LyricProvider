@@ -4,28 +4,27 @@
  * http://www.apache.org/licenses/LICENSE-2.0
  */
 
-package io.github.proify.lyricon.cloudprovider.xposed
+package io.github.proify.lyricon.gramophoneprovider.xposed
 
 import com.highcapable.yukihookapi.YukiHookAPI
 import com.highcapable.yukihookapi.annotation.xposed.InjectYukiHookWithXposed
 import com.highcapable.yukihookapi.hook.xposed.proxy.IYukiHookXposedInit
-import io.github.proify.lyricon.cloudprovider.xposed.Constants.PROVIDER_PACKAGE_NAME
+import io.github.proify.lyricon.gramophoneprovider.xposed.Constants.PROVIDER_PACKAGE_NAME
 
 @InjectYukiHookWithXposed(modulePackageName = PROVIDER_PACKAGE_NAME)
 open class HookEntry : IYukiHookXposedInit {
 
     override fun onHook() {
-
         YukiHookAPI.encase {
-            loadApp(isExcludeSelf = true, CloudProvider)
+            loadApp("org.akanework.gramophone", Gramophone())
         }
     }
 
     override fun onInit() {
+        super.onInit()
         YukiHookAPI.configs {
             debugLog {
-                isEnable = true
-                tag = "CloudProvider "
+                tag = "GramophoneProvider"
             }
         }
     }

@@ -19,11 +19,11 @@ data class EnhanceLrcDocument(
      * @param offsetMs 偏移毫秒数
      * @return 新的 EnhanceLrcDocument
      */
-    fun applyOffset(offsetMs: Long): EnhanceLrcDocument {
+    internal fun applyOffset(offsetMs: Long): EnhanceLrcDocument {
         val newLines = lines.map { line ->
             val newBegin = line.begin + offsetMs
             val newEnd = newBegin + line.duration
-            val newDuration = newEnd - newBegin
+            val newDuration = line.duration
             line.copy(begin = newBegin, end = newEnd, duration = newDuration)
         }
         return EnhanceLrcDocument(metadata, newLines)

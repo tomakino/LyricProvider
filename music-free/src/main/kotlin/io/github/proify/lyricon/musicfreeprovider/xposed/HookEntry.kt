@@ -9,8 +9,9 @@ package io.github.proify.lyricon.musicfreeprovider.xposed
 import com.highcapable.yukihookapi.YukiHookAPI
 import com.highcapable.yukihookapi.annotation.xposed.InjectYukiHookWithXposed
 import com.highcapable.yukihookapi.hook.xposed.proxy.IYukiHookXposedInit
+import io.github.proify.lyricon.musicfreeprovider.xposed.Constants.PROVIDER_PACKAGE_NAME
 
-@InjectYukiHookWithXposed(modulePackageName = "io.github.proify.lyricon.kgprovider")
+@InjectYukiHookWithXposed(modulePackageName = PROVIDER_PACKAGE_NAME)
 open class HookEntry : IYukiHookXposedInit {
 
     override fun onHook() {

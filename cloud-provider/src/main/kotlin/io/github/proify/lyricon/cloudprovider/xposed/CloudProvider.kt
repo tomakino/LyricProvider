@@ -13,16 +13,24 @@ import com.highcapable.yukihookapi.hook.entity.YukiBaseHooker
 import com.highcapable.yukihookapi.hook.log.YLog
 import io.github.proify.cloudlyric.LyricsResult
 import io.github.proify.cloudlyric.ProviderLyrics
+import io.github.proify.extensions.md5
 import io.github.proify.lyricon.lyric.model.Song
 import io.github.proify.lyricon.provider.LyriconFactory
 import io.github.proify.lyricon.provider.LyriconProvider
 import io.github.proify.lyricon.provider.ProviderLogo
 
+/**
+ * 从网络获取歌词
+ *
+ * 注意：如果被hook的app没有网络权限，那么将无法工作
+ */
 object CloudProvider : YukiBaseHooker(), DownloadCallback {
     private const val TAG: String = "CloudProvider"
 
     private var provider: LyriconProvider? = null
     private var lastMediaSignature: String? = null
+
+    private var curMediaMetadata: MediaMetadata? = null
 
     override fun onHook() {
         YLog.debug(tag = TAG, msg = "进程: $processName")
@@ -44,7 +52,10 @@ object CloudProvider : YukiBaseHooker(), DownloadCallback {
             playerPackageName = context.packageName,
             logo = ProviderLogo.fromBase64(Constants.ICON),
             processName = processName
-        ).apply { register() }
+        ).apply {
+            player.setDisplayTranslation(true)
+            register()
+        }
     }
 
     private fun hookMediaSession() {
@@ -61,7 +72,7 @@ object CloudProvider : YukiBaseHooker(), DownloadCallback {
 
             firstMethod {
                 name = "setMetadata"
-                parameters("android.media.MediaMetadata")
+                parameters(MediaMetadata::class.java)
             }.hook {
                 after {
                     val metadata = args[0] as? MediaMetadata ?: return@after
@@ -77,6 +88,7 @@ object CloudProvider : YukiBaseHooker(), DownloadCallback {
                         return@after
                     }
                     lastMediaSignature = signature
+                    curMediaMetadata = metadata
 
                     YLog.debug(
                         tag = TAG,
@@ -109,10 +121,14 @@ object CloudProvider : YukiBaseHooker(), DownloadCallback {
     }
 
     private fun calculateSignature(vararg data: String?): String {
-        return data.joinToString("") { it?.hashCode()?.toString() ?: "0" }.hashCode().toString()
+        return data.joinToString("").md5()
     }
 
     override fun onDownloadFinished(response: List<ProviderLyrics>) {
+        if (response.isEmpty()) {
+            YLog.debug(tag = TAG, msg = "No lyrics found")
+            return
+        }
         YLog.debug(tag = TAG, msg = "Download finished: $response")
         val song = response.firstOrNull()?.lyrics?.toSong()
         provider?.player?.setSong(song)
@@ -123,9 +139,14 @@ object CloudProvider : YukiBaseHooker(), DownloadCallback {
     }
 
     private fun LyricsResult.toSong() = Song().apply {
+        var duration = curMediaMetadata?.getLong(MediaMetadata.METADATA_KEY_DURATION) ?: 0
+        if (duration == 0L) {
+            duration = rich.lastOrNull()?.end ?: 0L
+        }
+
         name = trackName
         artist = artistName
         lyrics = rich
-        duration = rich.lastOrNull()?.end ?: 0L
+        this.duration = duration
     }
 }

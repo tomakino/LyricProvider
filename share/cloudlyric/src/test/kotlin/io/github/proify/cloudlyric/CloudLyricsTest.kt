@@ -18,10 +18,11 @@ class CloudLyricsTest {
 
         val start = System.currentTimeMillis()
         val result = cloudLyrics.search {
-            trackName = "我想念"
-            artistName = "汪苏泷"
+            trackName = "简单爱"
+            artistName = "周杰伦"
+            albumName = "范特西"
             perProviderLimit = 5
-            maxTotalResults = 10
+            maxTotalResults = 1
         }
         println("Time: ${System.currentTimeMillis() - start}ms")
 
