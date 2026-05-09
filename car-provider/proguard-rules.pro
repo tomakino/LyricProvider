@@ -1,2 +1,0 @@
--dontwarn java.lang.reflect.AnnotatedType
--repackageclasses ''
