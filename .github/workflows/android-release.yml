@@ -42,10 +42,7 @@ jobs:
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
           cache-disabled: false
 
-      - name: Decode Keystore
-        if: ${{ github.event.inputs.build-type == 'release' || env.BUILD_TYPE == 'release' }}
-        run: |
-          echo "${{ secrets.SIGNING_KEY }}" | base64 -d > release.jks
+      # ========== 删除了原来的Decode Keystore签名解码步骤 ==========
 
       - name: Build APKs with Caching
         run: |
@@ -54,11 +51,7 @@ jobs:
           else
             ./gradlew assembleDebug --build-cache
           fi
-        env:
-          RELEASE_STORE_FILE: ../release.jks
-          RELEASE_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
-          RELEASE_KEY_ALIAS: ${{ secrets.ALIAS }}
-          RELEASE_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        # ========== 删除了所有签名相关的环境变量 ==========
 
       - name: Collect APKs to flat directory
         run: |
@@ -81,5 +74,5 @@ jobs:
       - name: Cleanup
         if: always()
         run: |
-          rm -f release.jks || true
+          # ========== 删除了删除release.jks的逻辑 ==========
           rm -rf collected-apks || true
