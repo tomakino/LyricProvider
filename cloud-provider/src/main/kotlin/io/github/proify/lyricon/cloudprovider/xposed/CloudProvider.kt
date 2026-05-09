@@ -58,6 +58,21 @@ object CloudProvider : YukiBaseHooker(), DownloadCallback {
         }
     }
 
+    // ============== 新增：书名号内容提取方法开始 ==============
+    /**
+     * 提取歌曲名称：优先取书名号《》包裹的内容，没有则返回原标题
+     * @param rawTitle 原始读取到的媒体标题
+     * @return 处理后的歌曲名称
+     */
+    private fun extractSongTitle(rawTitle: String?): String? {
+        if (rawTitle.isNullOrEmpty()) return rawTitle
+        // 非贪婪匹配第一个中文书名号包裹的内容
+        val titleRegex = Regex("《(.+?)》")
+        val matchResult = titleRegex.find(rawTitle)
+        return matchResult?.groupValues?.getOrNull(1)?.trim() ?: rawTitle.trim()
+    }
+    // ============== 新增：书名号内容提取方法结束 ==============
+
     private fun hookMediaSession() {
         "android.media.session.MediaSession".toClass().resolve().apply {
             firstMethod {
@@ -78,7 +93,11 @@ object CloudProvider : YukiBaseHooker(), DownloadCallback {
                     val metadata = args[0] as? MediaMetadata ?: return@after
 
                     val id = metadata.getString(MediaMetadata.METADATA_KEY_MEDIA_ID)
-                    val title = metadata.getString(MediaMetadata.METADATA_KEY_TITLE)
+                    // ============== 修改：原标题读取后增加处理逻辑开始 ==============
+                    val rawTitle = metadata.getString(MediaMetadata.METADATA_KEY_TITLE)
+                    // 优先提取书名号内容作为歌曲名
+                    val title = extractSongTitle(rawTitle)
+                    // ============== 修改：原标题读取后增加处理逻辑结束 ==============
                     val artist = metadata.getString(MediaMetadata.METADATA_KEY_ARTIST)
                     val album = metadata.getString(MediaMetadata.METADATA_KEY_ALBUM)
 
@@ -92,7 +111,7 @@ object CloudProvider : YukiBaseHooker(), DownloadCallback {
 
                     YLog.debug(
                         tag = TAG,
-                        msg = "Metadata: id=$id, title=$title, artist=$artist, album=$album"
+                        msg = "Metadata: id=$id, rawTitle=$rawTitle, processedTitle=$title, artist=$artist, album=$album"
                     )
 
                     provider?.player?.setSong(
