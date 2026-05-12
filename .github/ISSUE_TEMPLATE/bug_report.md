@@ -1,38 +1,31 @@
 ---
-name: Bug report
-about: Create a report to help us improve
+name: Bug 报告
+about: 创建报告以帮助我们改进
 title: ''
 labels: ''
 assignees: ''
-
 ---
 
-**Describe the bug**
-A clear and concise description of what the bug is.
+**🐛 描述 Bug**
+清晰简洁地描述这个 Bug 是什么。
 
-**To Reproduce**
-Steps to reproduce the behavior:
-1. Go to '...'
-2. Click on '....'
-3. Scroll down to '....'
-4. See error
+**📋 复现步骤**
+复现该问题的操作步骤：
+1. 打开 '...'
+2. 点击 '...'
+3. 滑动到 '...'
+4. 出现错误
 
-**Expected behavior**
-A clear and concise description of what you expected to happen.
+**✅ 预期行为**
+清晰简洁地描述你期望发生的结果。
 
-**Screenshots**
-If applicable, add screenshots to help explain your problem.
+**📱 设备信息**
+ - 设备型号：[例如：小米14]
+ - 系统版本：[例如：Android 14]
+ - ROM/UI：[例如：MIUI 15、One UI 6.1、ColorOS 14]
 
-**Desktop (please complete the following information):**
- - OS: [e.g. iOS]
- - Browser [e.g. chrome, safari]
- - Version [e.g. 22]
+**📸 截图/录屏**
+如果方便，请添加截图或录屏来帮助说明问题。
 
-**Smartphone (please complete the following information):**
- - Device: [e.g. iPhone6]
- - OS: [e.g. iOS8.1]
- - Browser [e.g. stock browser, safari]
- - Version [e.g. 22]
-
-**Additional context**
-Add any other context about the problem here.
+**📝 补充说明**
+在此添加关于此问题的任何其他背景信息。
