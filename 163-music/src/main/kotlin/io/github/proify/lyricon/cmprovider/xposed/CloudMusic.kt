@@ -8,6 +8,7 @@ package io.github.proify.lyricon.cmprovider.xposed
 import android.app.Application
 import android.media.MediaMetadata
 import android.media.session.PlaybackState
+import android.util.Log
 import com.highcapable.kavaref.KavaRef.Companion.resolve
 import com.highcapable.yukihookapi.hook.entity.YukiBaseHooker
 import com.highcapable.yukihookapi.hook.log.YLog
@@ -56,6 +57,11 @@ object CloudMusic : YukiBaseHooker() {
 
         private var dexKitBridge: DexKitBridge? = null
         private var preferencesMonitor: PreferencesMonitor? = null
+        private var lyricInterceptor: LyricInterceptor? = null
+
+        /** 累积内部 Hook 拦截到的单行 LRC 文本，key 为 songId */
+        private val lrcLineAccumulator = mutableMapOf<Long, MutableSet<String>>()
+        private var lastCacheWriteLineCount = 0
 
         private var translationType: Int = 114514
 
@@ -73,6 +79,12 @@ object CloudMusic : YukiBaseHooker() {
                     lyricProvider?.player?.setDisplayRoma(type == 1)
                 }
             })
+
+            lyricInterceptor = LyricInterceptor(dexKitBridge!!, appClassLoader!!)
+            lyricInterceptor?.onLyricIntercepted = { lyric, trans, roma ->
+                onInternalLyricReceived(lyric, trans, roma)
+            }
+            lyricInterceptor?.hook()
 
             onAppLifecycle {
                 onCreate {
@@ -101,6 +113,7 @@ object CloudMusic : YukiBaseHooker() {
                 }
 
             preferencesMonitor?.update(classLoader)
+            lyricInterceptor?.rehook(classLoader)
         }
 
         /**
@@ -177,6 +190,14 @@ object CloudMusic : YukiBaseHooker() {
 
         @OptIn(ExperimentalSerializationApi::class)
         private fun writeToLocalLyricCache(id: Long, response: LyricResponse) {
+            // 如果 EApi 没有返回任何歌词内容，跳过缓存写入（避免覆盖内部 Hook 已写入的缓存）
+            val hasLyric = response.lrc?.lyric?.isNotBlank() == true
+                    || response.yrc?.lyric?.isNotBlank() == true
+            if (!hasLyric) {
+                Log.d(TAG, "EApi returned empty lyrics for $id, skipping cache write")
+                return
+            }
+
             val outputFile = getDownloadLyricFile(id)
             val cacheEntry = LocalLyricCache(
                 musicId = id,
@@ -209,16 +230,143 @@ object CloudMusic : YukiBaseHooker() {
 
         private fun onSongChanged(metadata: Metadata) {
             val newMusicId = metadata.id
+            Log.i(TAG, "Song changed: id=$newMusicId, title=$metadata.title, artist=$metadata.artist")
+
+            // 清空上一首歌的 LRC 行累积器，并写入缓存
+            flushLrcAccumulator(currentMusicId)
+            lrcLineAccumulator.remove(newMusicId)
+            lastCacheWriteLineCount = 0
+
+            // 写入共享文件，让 MAIN 进程也能知道当前的 songId + 歌曲信息
+            writeSharedCurrentSongId(metadata)
 
             val localCacheFile = getDownloadLyricFile(newMusicId)
             if (localCacheFile.exists()) {
+                Log.d(TAG, "Cache hit for $newMusicId")
                 loadLyricFromFile(
                     cacheSource = "localCache",
                     id = currentMusicId,
                     cacheFile = localCacheFile
                 )
             } else {
+                Log.d(TAG, "Cache miss for $newMusicId, starting EApi download")
                 Downloader.download(newMusicId, this)
+            }
+        }
+
+        /**
+         * 当内部 Hook 拦截到网易云 App 自身解析的歌词时回调。
+         * 作为 EApi 的 fallback：仅当 EApi 尚未为此歌曲提供歌词时才使用。
+         */
+        /**
+         * 内部 Hook 拦截到的单行 LRC 文本。
+         * 累积所有行，拼成完整 LRC 后逐次更新歌词显示 + 写入缓存。
+         *
+         * 注意：LRC 行来自 MAIN 进程，而 setMetadata/songId 来自 PLAY 进程。
+         * 通过 sharedCurrentSong 文件在两个进程间同步当前的 songId。
+         */
+        private fun onInternalLyricReceived(lyricLine: String, transLine: String?, romaLine: String?) {
+            // 从 PLAY 进程写入的共享文件读取真实 songId
+            val realSongId = readSharedCurrentSongId()
+            if (realSongId != null && realSongId != currentMusicId) {
+                val oldId = currentMusicId
+                currentMusicId = realSongId
+                // 把 fallback ID 下累积的行转移到真实 ID 下
+                val transferred = lrcLineAccumulator.remove(oldId)
+                if (transferred != null && transferred.isNotEmpty()) {
+                    lrcLineAccumulator.getOrPut(currentMusicId) { LinkedHashSet() }.addAll(transferred)
+                    Log.i(TAG, "Transferred ${transferred.size} LRC lines from fallback $oldId to real $currentMusicId")
+                } else {
+                    lrcLineAccumulator.remove(currentMusicId)
+                }
+                lastCacheWriteLineCount = 0
+                if (MediaMetadataCache.get(currentMusicId) == null) {
+                    MediaMetadataCache.savePlaceholder(currentMusicId)
+                }
+                Log.i(TAG, "Switched to PLAY process songId: $currentMusicId")
+            }
+
+            // 如果仍为 0（PLAY 进程尚未 setMetadata），用 fallback ID
+            if (currentMusicId == 0L) {
+                currentMusicId = lyricLine.hashCode().toLong().let { if (it < 0) -it else it }
+                MediaMetadataCache.savePlaceholder(currentMusicId)
+                Log.i(TAG, "Using fallback ID: $currentMusicId")
+            }
+
+            val metadata = MediaMetadataCache.get(currentMusicId) ?: return
+
+            // 累积 LRC 行
+            val lines = lrcLineAccumulator.getOrPut(currentMusicId) { LinkedHashSet() }
+            lines.add(lyricLine.trim())
+            val fullLrc = lines.joinToString("\n")
+
+            val cacheEntry = LocalLyricCache(musicId = metadata.id, lrc = fullLrc)
+
+            try {
+                val song = cacheEntry.toSong()
+                // 优先用本地 metadata，没有则从 PLAY 进程共享文件读取
+                val (sharedTitle, sharedArtist) = readSharedSongMeta()
+                song.name = metadata.title ?: sharedTitle ?: song.name
+                song.artist = metadata.artist ?: sharedArtist ?: song.artist
+                if (song.lyrics.isNullOrEmpty()) return
+
+                Log.i(TAG, "Internal lyric: ${lines.size} lines for id=$currentMusicId")
+                setSong(song)
+
+                // 每累积 >= 3 行即写入缓存（使用真实 songId 的路径，PLAY 进程可读到）
+                val cacheFile = getDownloadLyricFile(metadata.id)
+                val lineCount = lines.size
+                if (lineCount >= 3 || lineCount == 1) {
+                    cacheFile.outputStream().use { json.encodeToStream(cacheEntry, it) }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Internal lyric failed: ${e.message}", e)
+            }
+        }
+
+        /** PLAY 进程写入、MAIN 进程读取的共享元数据文件 */
+        private fun sharedMetaFile(): File =
+            File(Constants.getDownloadLyricDirectory(appContext!!), "_current_song")
+
+        private fun writeSharedCurrentSongId(metadata: Metadata) {
+            try {
+                // id 放第一行，title 第二行，artist 第三行
+                sharedMetaFile().writeText("${metadata.id}\n${metadata.title ?: ""}\n${metadata.artist ?: ""}")
+            } catch (_: Exception) { }
+        }
+
+        private fun readSharedCurrentSongId(): Long? {
+            return try {
+                val text = sharedMetaFile().takeIf { it.exists() }?.readText() ?: return null
+                text.lines().firstOrNull()?.trim()?.toLongOrNull()
+            } catch (_: Exception) { null }
+        }
+
+        /** 读取共享的歌曲名和艺术家 */
+        private fun readSharedSongMeta(): Pair<String?, String?> {
+            return try {
+                val text = sharedMetaFile().takeIf { it.exists() }?.readText() ?: return null to null
+                val lines = text.lines()
+                val title = lines.getOrNull(1)?.trim()?.takeIf { it.isNotEmpty() }
+                val artist = lines.getOrNull(2)?.trim()?.takeIf { it.isNotEmpty() }
+                title to artist
+            } catch (_: Exception) { null to null }
+        }
+
+        /** 歌曲切换时将累积的 LRC 写入缓存 */
+        private fun flushLrcAccumulator(songId: Long) {
+            val lines = lrcLineAccumulator[songId] ?: return
+            if (lines.isEmpty()) return
+            val metadata = MediaMetadataCache.get(songId) ?: return
+
+            val fullLrc = lines.joinToString("\n")
+            val cacheEntry = LocalLyricCache(musicId = songId, lrc = fullLrc)
+            try {
+                val cacheFile = getDownloadLyricFile(songId)
+                cacheFile.outputStream().use { json.encodeToStream(cacheEntry, it) }
+                Log.i(TAG, "LRC accumulator flushed to cache: ${lines.size} lines for $songId")
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to flush LRC cache: ${e.message}", e)
             }
         }
 
@@ -243,9 +391,14 @@ object CloudMusic : YukiBaseHooker() {
 
                     if (!parsedSong.lyrics.isNullOrEmpty() && !cache.pureMusic) {
                         songToSet = parsedSong
+                    } else {
+                        // 缓存为空（上次未成功获取歌词），删除以便重新累积
+                        cacheFile.delete()
+                        Log.d(TAG, "Deleted stale empty cache for $id")
                     }
                 } catch (e: Exception) {
                     YLog.error("Sync parse failed for $id: ${e.message}", e = e)
+                    cacheFile.delete()
                 }
             }
 
@@ -255,6 +408,7 @@ object CloudMusic : YukiBaseHooker() {
         private fun setSong(song: Song) {
             if (lastSetSong == song) return
             lastSetSong = song
+            Log.i(TAG, "setSong called: id=${song.id}, name=${song.name}, lines=${song.lyrics?.size ?: 0}, provider=${lyricProvider != null}")
             lyricProvider?.player?.setSong(song)
         }
     }
