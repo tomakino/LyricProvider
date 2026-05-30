@@ -31,6 +31,7 @@
 | 🧂 **Salt Music**                    | `salt-player-music` | Adapted based on Meizu standard lyric interface    |
 | 🎵 **Qishui Music**                  | `qishui-music`      | Supports dynamic lyrics, translated lyrics         |
 | 🎵 **MusicFree**                     | `music-free`        | Support translation                                |
+| 🎵 **Symfonium**                     | `symfonium`         | Support translation                                |
 
 ### Universal / Special Modules
 

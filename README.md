@@ -33,6 +33,7 @@
 | 🧂 **Salt 音乐**     | `salt-player-music` | 基于魅族标准歌词接口适配         |
 | 🎵 **汽水音乐**        | `qishui-music`      | 支持动态歌词、翻译歌词          |
 | 🎵 **MusicFree**   | `music-free`        | 支持翻译                 |
+| 🎵 **Symfonium**   | `symfonium`         | 支持翻译                 |
 
 ### 通用/特殊模块
 

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Symfonium Lyric Provider</string>
+    <string name="xposed_description">Exports Symfonium lyric data through Lyricon.</string>
+    <string name="lyricon_module_description">Provides Symfonium lyrics to Lyricon.</string>
+</resources>
