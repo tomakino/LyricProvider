@@ -64,14 +64,16 @@ object PlaybackManager {
         if (song.id == currentSongId && song != currentSong) {
             YLog.debug("PlaybackManager: Lyrics ready for current song ${song.id}, updating player")
             updateSong(song)
-        } else {
-            YLog.debug(
-                "PlaybackManager: Lyrics ready for ${song.id}, ignored " +
-                        "(current=${currentSongId}, identical=${song == currentSong})"
+        } else if (song.id != currentSongId) {
+            // MediaSession 的 mediaId 与 TTML 的 adamId 若不属于同一 id 体系，会走到这里。
+            YLog.warn(
+                tag = "AMProvider",
+                msg = "PlaybackManager: lyrics id (${song.id}) != playing id ($currentSongId), ignored"
             )
+        } else {
+            YLog.debug("PlaybackManager: Lyrics for ${song.id} unchanged, ignored")
         }
     }
-
     private fun updateSong(song: Song?) {
         currentSong = song
         player?.setSong(song)
