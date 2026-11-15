@@ -65,8 +65,8 @@ data class LyricAgent(
         var result = type.hashCode()
         result = 31 * result + nameTypes.contentHashCode()
         result = 31 * result + nameTypeNames.contentHashCode()
-        result = 31 * result + (typeName?.hashCode() ?: 0)
-        result = 31 * result + (id?.hashCode() ?: 0)
+        result = 31 * result + typeName.hashCode()
+        result = 31 * result + id.hashCode()
         return result
     }
 }

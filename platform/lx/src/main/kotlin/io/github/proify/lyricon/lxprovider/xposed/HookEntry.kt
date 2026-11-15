@@ -6,25 +6,33 @@
 
 package io.github.proify.lyricon.lxprovider.xposed
 
-import com.highcapable.yukihookapi.YukiHookAPI
-import com.highcapable.yukihookapi.annotation.xposed.InjectYukiHookWithXposed
-import com.highcapable.yukihookapi.hook.xposed.proxy.IYukiHookXposedInit
+import com.highcapable.yukihookapi.YukiHook
+import com.highcapable.yukihookapi.annotation.xposed.YukiHookLibXposedEntry
+import com.highcapable.yukihookapi.hook.xposed.YukiHookXposedModule
 import io.github.proify.lyricon.lxprovider.xposed.variant.ikunshare.IKunMusic
 import io.github.proify.lyricon.lxprovider.xposed.variant.lxnetease.LxNetease
 import io.github.proify.lyricon.lxprovider.xposed.variant.main.LXMusic
 
-@InjectYukiHookWithXposed(modulePackageName = Constants.PROVIDER_PACKAGE_NAME)
-open class HookEntry : IYukiHookXposedInit {
+@YukiHookLibXposedEntry(
+    targetApiVersion = 101,
+    scope = arrayOf(
+        "cn.toside.music.mobile",
+        "com.ikunshare.music.mobile",
+        "com.lxnetease.music.mobile"
+    ),
+    staticScope = true
+)
+open class HookEntry : YukiHookXposedModule {
 
-    override fun onHook() = YukiHookAPI.encase {
+    override fun onHook() = YukiHook.encase {
         loadApp("cn.toside.music.mobile", LXMusic())
         loadApp("com.ikunshare.music.mobile", IKunMusic())
         loadApp("com.lxnetease.music.mobile", LxNetease())
     }
 
     override fun onInit() {
-        YukiHookAPI.configs {
-            debugLog {
+        YukiHook.configure {
+            logging {
                 tag = "LXMusicProvider"
             }
         }

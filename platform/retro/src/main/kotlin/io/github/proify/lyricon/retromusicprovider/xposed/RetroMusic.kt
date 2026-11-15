@@ -8,6 +8,7 @@ package io.github.proify.lyricon.retromusicprovider.xposed
 import android.content.Context
 import android.media.MediaMetadata
 import android.media.session.PlaybackState
+import com.highcapable.yukihookapi.extension.kavaref.toClassOrNull
 import com.highcapable.yukihookapi.hook.entity.YukiBaseHooker
 import com.highcapable.yukihookapi.hook.log.YLog
 import de.robv.android.xposed.XposedHelpers
@@ -38,7 +39,7 @@ object RetroMusic : YukiBaseHooker() {
     override fun onHook() {
         YLog.info(tag = TAG, msg = "Starting Retro Music provider (Heuristic Depth-2 Mode)")
 
-        onAppLifecycle {
+        registerAppLifecycle(true) {
             onCreate { initProvider(this) }
             onTerminate {
                 provider?.unregister()

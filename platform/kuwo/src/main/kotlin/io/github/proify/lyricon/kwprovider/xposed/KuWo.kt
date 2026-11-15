@@ -9,6 +9,8 @@ package io.github.proify.lyricon.kwprovider.xposed
 import android.media.MediaMetadata
 import android.media.session.PlaybackState
 import com.highcapable.kavaref.KavaRef.Companion.resolve
+import com.highcapable.yukihookapi.extension.kavaref.hook
+import com.highcapable.yukihookapi.extension.kavaref.toClass
 import com.highcapable.yukihookapi.hook.entity.YukiBaseHooker
 import com.highcapable.yukihookapi.hook.log.YLog
 import io.github.proify.extensions.android.AndroidUtils
@@ -20,10 +22,10 @@ open class KuWo(val tag: String = "KuWoProvider") : YukiBaseHooker() {
     private var lyriconProvider: LyriconProvider? = null
 
     override fun onHook() {
-        AndroidUtils.openBluetoothA2dpOn(appClassLoader)
+        AndroidUtils.openBluetoothA2dpOn(hostClassLoader)
         YLog.debug(tag = tag, msg = "进程: $processName")
 
-        onAppLifecycle {
+        registerAppLifecycle(true) {
             onCreate {
                 initProvider()
             }
@@ -32,7 +34,7 @@ open class KuWo(val tag: String = "KuWoProvider") : YukiBaseHooker() {
     }
 
     private fun initProvider() {
-        val context = appContext ?: return
+        val context = hostApplication ?: return
         lyriconProvider = LyriconFactory.createProvider(
             context = context,
             providerPackageName = Constants.PROVIDER_PACKAGE_NAME,

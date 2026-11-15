@@ -16,6 +16,8 @@ import android.media.session.PlaybackState
 import android.util.Log
 import androidx.core.content.ContextCompat
 import com.highcapable.kavaref.KavaRef.Companion.resolve
+import com.highcapable.yukihookapi.extension.kavaref.hook
+import com.highcapable.yukihookapi.extension.kavaref.toClass
 import com.highcapable.yukihookapi.hook.entity.YukiBaseHooker
 import com.highcapable.yukihookapi.hook.log.YLog
 import io.github.proify.lyricon.lyric.model.RichLyricLine
@@ -43,7 +45,7 @@ object QQMusic : YukiBaseHooker() {
     private val playerProcessHook by lazy { PlayerProcessHook() }
 
     override fun onHook() {
-        val loader = appClassLoader ?: return
+        val loader = hostClassLoader ?: return
         when (processName) {
             PKG_MAIN -> mainProcessHook.hook(loader)
             PKG_PLAYER_SERVICE -> playerProcessHook.hook(loader)
@@ -71,9 +73,9 @@ object QQMusic : YukiBaseHooker() {
                             val intent = Intent(ACTION_LYRIC_SETTINGS_CHANGED).apply {
                                 putExtra("setting_key", key)
                                 putExtra("setting_value", value)
-                                setPackage(appContext?.packageName)
+                                setPackage(hostApplication?.packageName)
                             }
-                            appContext?.sendBroadcast(intent)
+                            hostApplication?.sendBroadcast(intent)
                             Log.d(TAG, "Settings changed in main process: $key -> $value")
                         }
                     }
@@ -88,7 +90,7 @@ object QQMusic : YukiBaseHooker() {
         fun hook(loader: ClassLoader) {
             YLog.debug(tag = TAG, msg = "Hooking Player Process: MediaSession & Lyricon Provider")
 
-            onAppLifecycle {
+            registerAppLifecycle(true) {
                 onCreate {
                     DiskSongCache.initialize(this)
                     setupLyriconProvider(this)

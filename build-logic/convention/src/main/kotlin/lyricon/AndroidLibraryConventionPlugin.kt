@@ -47,9 +47,13 @@ class AndroidLibraryConventionPlugin : Plugin<Project> {
         }
 
         dependencies {
-            add("implementation", projectRef.lib("yukihookapi-api"))
+            add("implementation", projectRef.lib("yukihook-core"))
+            add("implementation", projectRef.lib("yukihook-runtime-libxposed"))
+            add("implementation", projectRef.lib("yukihook-extension-kavaref"))
             add("implementation", projectRef.lib("kavaref-core"))
+            add("implementation", projectRef.lib("kavaref-android"))
             add("implementation", projectRef.lib("kavaref-extension"))
+            add("compileOnly", projectRef.lib("libxposed-api"))
             add("compileOnly", projectRef.lib("xposed-api"))
             add("implementation", projectRef.lib("kotlinx-serialization-json"))
             add("implementation", projectRef.lib("androidx-core-ktx"))

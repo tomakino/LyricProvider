@@ -60,7 +60,7 @@ object SpotifyHooker : YukiBaseHooker() {
     }
 
     private fun registerLifecycleCallbacks() {
-        onAppLifecycle {
+        registerAppLifecycle(true) {
             onCreate {
                 initProvider()
             }
@@ -78,8 +78,8 @@ object SpotifyHooker : YukiBaseHooker() {
         mediaSessionHooker?.hook()
 
         // Hook OkHttp
-        val context = appContext
-        val classLoader = appClassLoader
+        val context = hostApplication
+        val classLoader = hostClassLoader
         if (context != null && classLoader != null) {
             val versionCode = getVersionCode(context)
             val bridge = dexKitBridge
@@ -90,7 +90,7 @@ object SpotifyHooker : YukiBaseHooker() {
     }
 
     private fun initProvider() {
-        val context = appContext ?: return
+        val context = hostApplication ?: return
 
         lyriconProvider = LyriconFactory.createProvider(
             context = context,
@@ -109,7 +109,7 @@ object SpotifyHooker : YukiBaseHooker() {
     }
 
     private fun handleTrackChanged(metadata: Metadata) {
-        val context = appContext ?: return
+        val context = hostApplication ?: return
 
         lyricFetcher?.fetch(
             context = context,

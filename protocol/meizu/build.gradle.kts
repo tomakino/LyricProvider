@@ -16,5 +16,5 @@ android {
 dependencies {
     implementation(project(":common:base:extensions-android"))
     implementation(libs.lyricon.provider)
-    ksp(libs.yukihookapi.ksp.xposed)
+    ksp(libs.yukihook.compiler)
 }

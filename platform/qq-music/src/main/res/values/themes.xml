@@ -6,5 +6,5 @@
 
 <resources>
 
-<style name="Theme.LyricProvider" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.LyricProvider" parent="android:Theme.Material.Light.NoActionBar" />
 </resources>

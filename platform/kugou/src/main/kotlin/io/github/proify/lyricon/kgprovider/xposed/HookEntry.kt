@@ -6,18 +6,21 @@
 
 package io.github.proify.lyricon.kgprovider.xposed
 
-import com.highcapable.yukihookapi.YukiHookAPI
-import com.highcapable.yukihookapi.annotation.xposed.InjectYukiHookWithXposed
-import com.highcapable.yukihookapi.hook.xposed.proxy.IYukiHookXposedInit
-import io.github.proify.lyricon.kgprovider.xposed.Constants.PROVIDER_PACKAGE_NAME
+import com.highcapable.yukihookapi.YukiHook
+import com.highcapable.yukihookapi.annotation.xposed.YukiHookLibXposedEntry
+import com.highcapable.yukihookapi.hook.xposed.YukiHookXposedModule
 import io.github.proify.lyricon.kgprovider.xposed.kugou.KuGou
 import io.github.proify.lyricon.kgprovider.xposed.kugou.KuGouLite
 
-@InjectYukiHookWithXposed(modulePackageName = PROVIDER_PACKAGE_NAME)
-open class HookEntry : IYukiHookXposedInit {
+@YukiHookLibXposedEntry(
+    targetApiVersion = 101,
+    scope = arrayOf("com.kugou.android", "com.kugou.android.lite"),
+    staticScope = true
+)
+open class HookEntry : YukiHookXposedModule {
 
     override fun onHook() {
-        YukiHookAPI.encase {
+        YukiHook.encase {
             loadApp("com.kugou.android", KuGou())
             loadApp("com.kugou.android.lite", KuGouLite())
         }
@@ -25,8 +28,8 @@ open class HookEntry : IYukiHookXposedInit {
 
     override fun onInit() {
         super.onInit()
-        YukiHookAPI.configs {
-            debugLog {
+        YukiHook.configure {
+            logging {
                 tag = "KuGouMusicProvider"
             }
         }

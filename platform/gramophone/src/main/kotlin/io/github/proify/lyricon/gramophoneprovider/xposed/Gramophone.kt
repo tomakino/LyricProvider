@@ -10,6 +10,8 @@ import android.content.Context
 import android.media.session.PlaybackState
 import android.net.Uri
 import com.highcapable.kavaref.KavaRef.Companion.resolve
+import com.highcapable.yukihookapi.extension.kavaref.hook
+import com.highcapable.yukihookapi.extension.kavaref.toClass
 import com.highcapable.yukihookapi.hook.entity.YukiBaseHooker
 import com.highcapable.yukihookapi.hook.log.YLog
 import com.kyant.taglib.TagLib
@@ -50,7 +52,7 @@ open class Gramophone(val tag: String = "GramophoneProvider") : YukiBaseHooker()
     override fun onHook() {
         YLog.debug(tag = tag, msg = "Starting Gramophone hook integration...")
 
-        onAppLifecycle {
+        registerAppLifecycle(true) {
             onCreate {
                 initProvider(this)
             }
@@ -164,7 +166,7 @@ open class Gramophone(val tag: String = "GramophoneProvider") : YukiBaseHooker()
      * @return 歌词字符串, 若未找到则返回 null
      */
     private fun fetchLyricFromTag(uri: Uri): String? = try {
-        appContext?.contentResolver?.openFileDescriptor(uri, "r")?.use { pfd ->
+        hostApplication?.contentResolver?.openFileDescriptor(uri, "r")?.use { pfd ->
             TagLib.getMetadata(pfd.dup().detachFd())?.let { metadata ->
                 metadata.propertyMap.entries.firstOrNull { (key, _) ->
                     lyricTagRegex.matches(key)

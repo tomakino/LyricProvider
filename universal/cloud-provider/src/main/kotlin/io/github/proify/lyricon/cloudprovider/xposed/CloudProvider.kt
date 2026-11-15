@@ -6,6 +6,13 @@
 
 package io.github.proify.lyricon.cloudprovider.xposed
 
+import com.highcapable.yukihookapi.extension.kavaref.toClass
+import com.highcapable.yukihookapi.extension.kavaref.hook
+
+import com.highcapable.yukihookapi.extension.kavaref.hook
+
+import com.highcapable.yukihookapi.extension.kavaref.toClass
+
 import android.media.MediaMetadata
 import android.media.session.PlaybackState
 import com.highcapable.kavaref.KavaRef.Companion.resolve
@@ -35,7 +42,7 @@ object CloudProvider : YukiBaseHooker(), DownloadCallback {
     override fun onHook() {
         YLog.debug(tag = TAG, msg = "进程: $processName")
 
-        onAppLifecycle {
+        registerAppLifecycle(true) {
             onCreate {
                 initProvider()
             }
@@ -45,7 +52,7 @@ object CloudProvider : YukiBaseHooker(), DownloadCallback {
     }
 
     private fun initProvider() {
-        val context = appContext ?: return
+        val context = hostApplication ?: return
         provider = LyriconFactory.createProvider(
             context = context,
             providerPackageName = Constants.PROVIDER_PACKAGE_NAME,

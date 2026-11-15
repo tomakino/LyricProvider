@@ -10,6 +10,8 @@ import android.media.MediaMetadata
 import android.media.session.PlaybackState
 import android.net.Uri
 import com.highcapable.kavaref.KavaRef.Companion.resolve
+import com.highcapable.yukihookapi.extension.kavaref.hook
+import com.highcapable.yukihookapi.extension.kavaref.toClass
 import com.highcapable.yukihookapi.hook.entity.YukiBaseHooker
 import com.highcapable.yukihookapi.hook.log.YLog
 import com.kyant.taglib.TagLib
@@ -34,7 +36,7 @@ class Symfonium : YukiBaseHooker() {
     override fun onHook() {
         YLog.debug(tag = TAG, msg = "进程: $packageName/$processName")
 
-        onAppLifecycle {
+        registerAppLifecycle(true) {
             onCreate {
                 initProvider()
             }
@@ -96,7 +98,7 @@ class Symfonium : YukiBaseHooker() {
     }
 
     private fun fetchLyricFromTag(uri: Uri): String? = try {
-        appContext?.contentResolver?.openFileDescriptor(uri, "r")?.use { pfd ->
+        hostApplication?.contentResolver?.openFileDescriptor(uri, "r")?.use { pfd ->
             TagLib.getMetadata(pfd.dup().detachFd())?.let { metadata ->
                 metadata.propertyMap.entries.firstOrNull { (key, _) ->
                     lyricTagRegex.matches(key)
@@ -109,7 +111,7 @@ class Symfonium : YukiBaseHooker() {
     }
 
     private fun initProvider() {
-        val context = appContext ?: return
+        val context = hostApplication ?: return
         lyriconProvider = LyriconFactory.createProvider(
             context = context,
             providerPackageName = Constants.PROVIDER_PACKAGE_NAME,

@@ -6,26 +6,28 @@
 
 package io.github.proify.lyricon.amprovider.xposed
 
-import com.highcapable.yukihookapi.YukiHookAPI
-import com.highcapable.yukihookapi.annotation.xposed.InjectYukiHookWithXposed
-import com.highcapable.yukihookapi.hook.xposed.proxy.IYukiHookXposedInit
+import com.highcapable.yukihookapi.YukiHook
+import com.highcapable.yukihookapi.annotation.xposed.YukiHookLibXposedEntry
+import com.highcapable.yukihookapi.hook.xposed.YukiHookXposedModule
 
-@InjectYukiHookWithXposed(modulePackageName = Constants.PROVIDER_PACKAGE_NAME)
-open class HookEntry : IYukiHookXposedInit {
+@YukiHookLibXposedEntry(
+    targetApiVersion = 101,
+    scope = ["com.apple.android.music"],
+    staticScope = true,
+)
+open class HookEntry : YukiHookXposedModule {
 
     override fun onHook() {
-        YukiHookAPI.encase {
+        YukiHook.encase {
             loadApp(Constants.APPLE_MUSIC_PACKAGE_NAME, Apple)
         }
     }
 
     override fun onInit() {
         super.onInit()
-        YukiHookAPI.configs {
-            debugLog {
+        YukiHook.configure {
+            logging {
                 tag = "AMProvider"
-                isEnable = true
-                elements(TAG, PRIORITY, PACKAGE_NAME, USER_ID)
             }
         }
     }

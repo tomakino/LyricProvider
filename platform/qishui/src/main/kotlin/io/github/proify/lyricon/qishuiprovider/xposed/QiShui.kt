@@ -3,6 +3,9 @@ package io.github.proify.lyricon.qishuiprovider.xposed
 import android.media.MediaMetadata
 import android.media.session.PlaybackState
 import com.highcapable.kavaref.KavaRef.Companion.resolve
+import com.highcapable.kavaref.extension.classOf
+import com.highcapable.yukihookapi.extension.kavaref.hook
+import com.highcapable.yukihookapi.extension.kavaref.toClass
 import com.highcapable.yukihookapi.hook.entity.YukiBaseHooker
 import com.highcapable.yukihookapi.hook.log.YLog
 import io.github.proify.extensions.json
@@ -28,7 +31,7 @@ object QiShui : YukiBaseHooker() {
     override fun onHook() {
         YLog.info(tag = TAG, msg = "$packageName/$processName")
 
-        onAppLifecycle {
+        registerAppLifecycle(true) {
             onCreate {
                 hook()
             }
@@ -48,7 +51,7 @@ object QiShui : YukiBaseHooker() {
     }
 
     private fun initProvider() {
-        val context = appContext ?: return
+        val context = hostApplication ?: return
         provider = LyriconFactory.createProvider(
             context = context,
             providerPackageName = Constants.PROVIDER_PACKAGE_NAME,
@@ -68,7 +71,7 @@ object QiShui : YukiBaseHooker() {
             .apply {
                 firstMethod {
                     name = "setPlaybackState"
-                    parameters(PlaybackState::class.java)
+                    parameters(classOf<PlaybackState>())
                 }.hook {
                     after {
                         val state = args[0] as? PlaybackState
@@ -143,7 +146,7 @@ object QiShui : YukiBaseHooker() {
         )
     }
 
-    private val netCacheLoaderDir by lazy { appContext!!.cacheDir.resolve("NetCacheLoader") }
+    private val netCacheLoaderDir by lazy { hostApplication!!.cacheDir.resolve("NetCacheLoader") }
 
     fun getNetLyricCacheFile(id: String): File? {
         val fileName = calculateLyricCacheFileName(id)

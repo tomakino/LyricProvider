@@ -6,24 +6,27 @@
 
 package io.github.proify.lyricon.kwprovider.xposed
 
-import com.highcapable.yukihookapi.YukiHookAPI
-import com.highcapable.yukihookapi.annotation.xposed.InjectYukiHookWithXposed
-import com.highcapable.yukihookapi.hook.xposed.proxy.IYukiHookXposedInit
-import io.github.proify.lyricon.kwprovider.xposed.Constants.PROVIDER_PACKAGE_NAME
+import com.highcapable.yukihookapi.YukiHook
+import com.highcapable.yukihookapi.annotation.xposed.YukiHookLibXposedEntry
+import com.highcapable.yukihookapi.hook.xposed.YukiHookXposedModule
 
-@InjectYukiHookWithXposed(modulePackageName = PROVIDER_PACKAGE_NAME)
-open class HookEntry : IYukiHookXposedInit {
+@YukiHookLibXposedEntry(
+    targetApiVersion = 101,
+    scope = arrayOf("cn.kuwo.player"),
+    staticScope = true
+)
+open class HookEntry : YukiHookXposedModule {
 
     override fun onHook() {
-        YukiHookAPI.encase {
+        YukiHook.encase {
             loadApp("cn.kuwo.player", KuWo())
         }
     }
 
     override fun onInit() {
         super.onInit()
-        YukiHookAPI.configs {
-            debugLog {
+        YukiHook.configure {
+            logging {
                 tag = "KuGouMusicProvider"
             }
         }

@@ -6,6 +6,13 @@
 
 package io.github.proify.lyricon.library.carprovider
 
+import com.highcapable.yukihookapi.extension.kavaref.toClass
+import com.highcapable.yukihookapi.extension.kavaref.hook
+
+import com.highcapable.yukihookapi.extension.kavaref.hook
+
+import com.highcapable.yukihookapi.extension.kavaref.toClass
+
 import android.media.MediaMetadata
 import android.media.session.PlaybackState
 import com.highcapable.kavaref.KavaRef.Companion.resolve
@@ -28,15 +35,13 @@ open class CarProvider(
         AndroidUtils.openBluetoothA2dpOn(appClassLoader)
         YLog.debug(tag = tag, msg = "进程: $processName")
 
-        onAppLifecycle {
-            onCreate { initProvider() }
-        }
+        registerAppLifecycle(true) { onCreate { initProvider() } }
 
         hookMediaSession()
     }
 
     private fun initProvider() {
-        val context = appContext ?: return
+        val context = hostApplication ?: return
         provider = LyriconFactory.createProvider(
             context = context,
             providerPackageName = providerPackageName,

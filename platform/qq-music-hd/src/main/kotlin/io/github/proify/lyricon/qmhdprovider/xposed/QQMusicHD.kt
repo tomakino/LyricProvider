@@ -11,6 +11,8 @@ import android.media.MediaMetadata
 import android.media.session.MediaSession
 import android.media.session.PlaybackState
 import com.highcapable.kavaref.KavaRef.Companion.resolve
+import com.highcapable.yukihookapi.extension.kavaref.hook
+import com.highcapable.yukihookapi.extension.kavaref.toClassOrNull
 import com.highcapable.yukihookapi.hook.entity.YukiBaseHooker
 import com.highcapable.yukihookapi.hook.log.YLog
 import io.github.proify.lyricon.lyric.model.RichLyricLine
@@ -48,9 +50,9 @@ object QQMusicHD : YukiBaseHooker() {
 
     private var isCreated = false
     override fun onHook() {
-        val loader = appClassLoader ?: return
+        val loader = hostClassLoader ?: return
 
-        onAppLifecycle {
+        registerAppLifecycle(true) {
             onCreate {
                 if (isCreated) return@onCreate; isCreated = true
 

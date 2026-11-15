@@ -14,6 +14,8 @@ import android.media.session.PlaybackState
 import android.net.Uri
 import androidx.core.content.ContextCompat
 import com.highcapable.kavaref.KavaRef.Companion.resolve
+import com.highcapable.yukihookapi.extension.kavaref.hook
+import com.highcapable.yukihookapi.extension.kavaref.toClass
 import com.highcapable.yukihookapi.hook.entity.YukiBaseHooker
 import com.highcapable.yukihookapi.hook.log.YLog
 import com.kyant.taglib.TagLib
@@ -39,7 +41,7 @@ object PowerAmp : YukiBaseHooker(), DownloadCallback {
     private var currentMetadata: TrackMetadata? = null
 
     override fun onHook() {
-        onAppLifecycle {
+        registerAppLifecycle(true) {
             onCreate {
                 initDataChannel()
                 setupLyriconProvider(this)
@@ -73,7 +75,7 @@ object PowerAmp : YukiBaseHooker(), DownloadCallback {
      * 应用当前配置项。
      */
     private fun applyProviderSettings() {
-        val isTranslationEnabled = prefs.get(Configs.ENABLE_TRANSLATION)
+        val isTranslationEnabled = preferences.get(Configs.ENABLE_TRANSLATION)
         provider?.player?.setDisplayTranslation(isTranslationEnabled)
         YLog.debug(tag = TAG, msg = "Settings applied: translationEnabled=$isTranslationEnabled")
     }
@@ -119,7 +121,7 @@ object PowerAmp : YukiBaseHooker(), DownloadCallback {
 
         val rawPath = metadata.path ?: return
         val formattedPath = formatSafPath(rawPath) ?: return
-        val uri = SafUriResolver.resolveToUri(appContext!!, formattedPath) ?: return
+        val uri = SafUriResolver.resolveToUri(hostApplication!!, formattedPath) ?: return
 
         // 先发送基础歌曲信息（清除旧歌词）
         updateSong(Song(name = metadata.title, artist = metadata.artist))
@@ -129,7 +131,7 @@ object PowerAmp : YukiBaseHooker(), DownloadCallback {
 
         // 本地加载失败则根据配置尝试网络搜索
         if (!hasLocalLyric) {
-            val isNetSearchEnabled = prefs.get(Configs.ENABLE_NET_SEARCH)
+            val isNetSearchEnabled = preferences.get(Configs.ENABLE_NET_SEARCH)
             if (isNetSearchEnabled) {
                 YLog.debug(
                     tag = TAG,
@@ -169,7 +171,7 @@ object PowerAmp : YukiBaseHooker(), DownloadCallback {
      * 使用 TagLib 提取音频标签中的歌词字段。
      */
     private fun fetchLyricFromTag(uri: Uri): String? = try {
-        appContext?.contentResolver?.openFileDescriptor(uri, "r")?.use { pfd ->
+        hostApplication?.contentResolver?.openFileDescriptor(uri, "r")?.use { pfd ->
             TagLib.getMetadata(pfd.dup().detachFd())?.let { metadata ->
                 metadata.propertyMap.entries.firstOrNull { (key, _) ->
                     lyricTagRegex.matches(key)
@@ -236,7 +238,7 @@ object PowerAmp : YukiBaseHooker(), DownloadCallback {
     }
 
     private fun release() {
-        trackReceiver?.let { appContext?.unregisterReceiver(it) }
+        trackReceiver?.let { hostApplication?.unregisterReceiver(it) }
         trackReceiver = null
         YLog.info(tag = TAG, msg = "PowerAmp provider released")
     }

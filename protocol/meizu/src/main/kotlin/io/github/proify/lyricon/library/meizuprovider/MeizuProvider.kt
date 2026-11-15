@@ -6,6 +6,13 @@
 
 package io.github.proify.lyricon.library.meizuprovider
 
+import com.highcapable.yukihookapi.extension.kavaref.toClass
+import com.highcapable.yukihookapi.extension.kavaref.hook
+
+import com.highcapable.yukihookapi.extension.kavaref.hook
+
+import com.highcapable.yukihookapi.extension.kavaref.toClass
+
 import android.app.Notification
 import android.app.NotificationManager
 import android.media.session.PlaybackState
@@ -30,9 +37,9 @@ open class MeizuProvider(
 
     private val provider: LyriconProvider by lazy {
         LyriconFactory.createProvider(
-            appContext!!,
+            hostApplication!!,
             providerPackageName,
-            appContext!!.packageName,
+            hostApplication!!.packageName,
             logo
         ).apply(LyriconProvider::register)
     }
@@ -41,7 +48,7 @@ open class MeizuProvider(
         YLog.debug("Hooking processName: $processName")
         Flyme.mock(appClassLoader!!)
 
-        onAppLifecycle {
+        registerAppLifecycle(true) {
             onCreate {
                 hookMedia()
                 hookNotify()

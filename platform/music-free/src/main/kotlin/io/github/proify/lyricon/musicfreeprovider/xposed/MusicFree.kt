@@ -10,6 +10,8 @@ import android.media.session.PlaybackState
 import android.view.View
 import android.widget.TextView
 import com.highcapable.kavaref.KavaRef.Companion.resolve
+import com.highcapable.yukihookapi.extension.kavaref.hook
+import com.highcapable.yukihookapi.extension.kavaref.toClass
 import com.highcapable.yukihookapi.hook.entity.YukiBaseHooker
 import com.highcapable.yukihookapi.hook.log.YLog
 import de.robv.android.xposed.XC_MethodHook
@@ -23,10 +25,10 @@ open class MusicFree(val tag: String = "MusicFreeProvider") : YukiBaseHooker() {
     private var provider: LyriconProvider? = null
 
     override fun onHook() {
-        AndroidUtils.openBluetoothA2dpOn(appClassLoader)
+        AndroidUtils.openBluetoothA2dpOn(hostClassLoader)
         YLog.debug(tag = tag, msg = "进程: $processName")
 
-        onAppLifecycle {
+        registerAppLifecycle(true) {
             onCreate {
                 initProvider()
             }
@@ -63,7 +65,7 @@ open class MusicFree(val tag: String = "MusicFreeProvider") : YukiBaseHooker() {
     }
 
     private fun initProvider() {
-        val context = appContext ?: return
+        val context = hostApplication ?: return
         provider = LyriconFactory.createProvider(
             context = context,
             providerPackageName = Constants.PROVIDER_PACKAGE_NAME,

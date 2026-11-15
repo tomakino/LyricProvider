@@ -9,7 +9,7 @@ package io.github.proify.lyricon.paprovider.app.ui
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import com.highcapable.yukihookapi.hook.factory.dataChannel
-import com.highcapable.yukihookapi.hook.factory.prefs
+import com.highcapable.yukihookapi.hook.factory.preferences
 import com.highcapable.yukihookapi.hook.log.YLog
 import io.github.proify.lyricon.paprovider.R
 import io.github.proify.lyricon.paprovider.bridge.BridgeConstants
@@ -37,15 +37,15 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun initViews() {
-        binding.switchTranslation.isChecked = prefs().get(Configs.ENABLE_TRANSLATION)
-        binding.switchNetSearch.isChecked = prefs().get(Configs.ENABLE_NET_SEARCH)
+        binding.switchTranslation.isChecked = preferences().get(Configs.ENABLE_TRANSLATION)
+        binding.switchNetSearch.isChecked = preferences().get(Configs.ENABLE_NET_SEARCH)
 
         //binding.switchAutoSave.isChecked = prefs().get(Config.ENABLE_AUTO_SAVE)
         //updateAutoSaveState(binding.switchNetSearch.isChecked)
 
         binding.switchTranslation.setOnCheckedChangeListener { _, isChecked ->
             YLog.debug("[设置] 翻译显示 -> $isChecked")
-            prefs().edit().apply {
+            preferences().edit().apply {
                 put(Configs.ENABLE_TRANSLATION, isChecked)
                 commit() //使用 commit() 而不是 apply()，确保数据被立即写入
             }
@@ -54,7 +54,7 @@ class SettingsActivity : AppCompatActivity() {
 
         binding.switchNetSearch.setOnCheckedChangeListener { _, isChecked ->
             YLog.debug("[设置] 云端搜索 -> $isChecked")
-            prefs().edit().apply {
+            preferences().edit().apply {
                 put(Configs.ENABLE_NET_SEARCH, isChecked)
                 commit()
             }

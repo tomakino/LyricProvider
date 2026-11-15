@@ -6,23 +6,27 @@
 
 package io.github.proify.lyricon.splayerprovider.xposed
 
-import com.highcapable.yukihookapi.YukiHookAPI
-import com.highcapable.yukihookapi.annotation.xposed.InjectYukiHookWithXposed
-import com.highcapable.yukihookapi.hook.xposed.proxy.IYukiHookXposedInit
+import com.highcapable.yukihookapi.YukiHook
+import com.highcapable.yukihookapi.annotation.xposed.YukiHookLibXposedEntry
+import com.highcapable.yukihookapi.hook.xposed.YukiHookXposedModule
 
-@InjectYukiHookWithXposed(modulePackageName = Constants.PROVIDER_PACKAGE_NAME)
-open class HookEntry : IYukiHookXposedInit {
+@YukiHookLibXposedEntry(
+    targetApiVersion = 101,
+    scope = arrayOf("top.imsyy.splayer.android"),
+    staticScope = true
+)
+open class HookEntry : YukiHookXposedModule {
 
     override fun onHook() {
-        YukiHookAPI.encase {
+        YukiHook.encase {
             loadApp(Constants.MUSIC_PACKAGE_NAME, SPlayerLyricProvider)
         }
     }
 
     override fun onInit() {
-        YukiHookAPI.configs {
-            debugLog {
-                isEnable = true
+        YukiHook.configure {
+            logging {
+                Config.enabled = true
                 tag = "SPlayerProvider"
             }
         }

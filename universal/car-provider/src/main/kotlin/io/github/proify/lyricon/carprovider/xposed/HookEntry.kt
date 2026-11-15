@@ -6,26 +6,26 @@
 
 package io.github.proify.lyricon.carprovider.xposed
 
-import com.highcapable.yukihookapi.YukiHookAPI
-import com.highcapable.yukihookapi.annotation.xposed.InjectYukiHookWithXposed
-import com.highcapable.yukihookapi.hook.xposed.proxy.IYukiHookXposedInit
+import com.highcapable.yukihookapi.YukiHook
+import com.highcapable.yukihookapi.annotation.xposed.YukiHookLibXposedEntry
+import com.highcapable.yukihookapi.hook.xposed.YukiHookXposedModule
 import io.github.proify.lyricon.library.carprovider.CarProvider
 import io.github.proify.lyricon.provider.ProviderLogo
 
-@InjectYukiHookWithXposed(modulePackageName = Constants.PROVIDER_PACKAGE_NAME)
-open class HookEntry : IYukiHookXposedInit {
+@YukiHookLibXposedEntry(targetApiVersion = 101)
+open class HookEntry : YukiHookXposedModule {
 
     override fun onHook() =
-        YukiHookAPI.encase {
+        YukiHook.encase {
             loadApp(
-                isExcludeSelf = true, CarProvider(
+                excludeSelf = true, CarProvider(
                     providerPackageName = Constants.PROVIDER_PACKAGE_NAME,
                     logo = ProviderLogo.fromBase64(Constants.ICON)
                 )
             )
         }
 
-    override fun onInit() = YukiHookAPI.configs {
-        debugLog { tag = "CarProvider" }
+    override fun onInit() = YukiHook.configure {
+        logging { tag = "CarProvider" }
     }
 }

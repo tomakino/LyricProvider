@@ -6,19 +6,23 @@
 
 package io.github.proify.lyricon.qishuiprovider.xposed
 
-import com.highcapable.yukihookapi.YukiHookAPI
-import com.highcapable.yukihookapi.annotation.xposed.InjectYukiHookWithXposed
-import com.highcapable.yukihookapi.hook.xposed.proxy.IYukiHookXposedInit
+import com.highcapable.yukihookapi.YukiHook
+import com.highcapable.yukihookapi.annotation.xposed.YukiHookLibXposedEntry
+import com.highcapable.yukihookapi.hook.xposed.YukiHookXposedModule
 
-@InjectYukiHookWithXposed(modulePackageName = Constants.PROVIDER_PACKAGE_NAME)
-open class HookEntry : IYukiHookXposedInit {
+@YukiHookLibXposedEntry(
+    targetApiVersion = 101,
+    scope = arrayOf("com.luna.music"),
+    staticScope = true
+)
+open class HookEntry : YukiHookXposedModule {
 
     override fun onHook() =
-        YukiHookAPI.encase {
+        YukiHook.encase {
             loadApp("com.luna.music", QiShui)
         }
 
-    override fun onInit() = YukiHookAPI.configs {
-        debugLog { tag = "QiShuiProvider" }
+    override fun onInit() = YukiHook.configure {
+        logging { tag = "QiShuiProvider" }
     }
 }

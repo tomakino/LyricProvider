@@ -12,6 +12,8 @@ import android.app.Application
 import android.media.MediaMetadata
 import android.media.session.PlaybackState
 import com.highcapable.kavaref.KavaRef.Companion.resolve
+import com.highcapable.yukihookapi.extension.kavaref.hook
+import com.highcapable.yukihookapi.extension.kavaref.toClass
 import com.highcapable.yukihookapi.hook.entity.YukiBaseHooker
 import com.highcapable.yukihookapi.hook.log.YLog
 import io.github.proify.lyricon.bodianprovider.BuildConfig
@@ -63,7 +65,11 @@ object Bodian : YukiBaseHooker() {
     override fun onHook() {
         YLog.info(tag = TAG, msg = "attached: $packageName / $processName")
 
-        onAppLifecycle {
+        // 放在 Application 创建之后：此时 Flutter 引擎的 dex 一定可加载
+        registerAppLifecycle(
+            true
+        ) // 放在 Application 创建之后：此时 Flutter 引擎的 dex 一定可加载
+        {
             onCreate {
                 application = this
                 DiskSongCache.initialize(this)
@@ -90,7 +96,7 @@ object Bodian : YukiBaseHooker() {
     private fun ensureProvider(): LyriconProvider? {
         provider?.let { return it }
 
-        val context = application ?: appContext ?: return null
+        val context = application ?: hostApplication ?: return null
         val created = LyriconFactory.createProvider(
             context = context,
             providerPackageName = Constants.PROVIDER_PACKAGE_NAME,

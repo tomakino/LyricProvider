@@ -6,22 +6,22 @@
 
 package io.github.proify.lyricon.meizuprovider.xposed
 
-import com.highcapable.yukihookapi.YukiHookAPI
-import com.highcapable.yukihookapi.annotation.xposed.InjectYukiHookWithXposed
-import com.highcapable.yukihookapi.hook.xposed.proxy.IYukiHookXposedInit
+import com.highcapable.yukihookapi.YukiHook
+import com.highcapable.yukihookapi.annotation.xposed.YukiHookLibXposedEntry
+import com.highcapable.yukihookapi.hook.xposed.YukiHookXposedModule
 import io.github.proify.lyricon.library.meizuprovider.MeizuProvider
 import io.github.proify.lyricon.provider.ProviderLogo
 
 /**
  * 此应用为:share:meizhu-provider模块的包装
  */
-@InjectYukiHookWithXposed(modulePackageName = Constants.PROVIDER_PACKAGE_NAME)
-open class HookEntry : IYukiHookXposedInit {
+@YukiHookLibXposedEntry(targetApiVersion = 101)
+open class HookEntry : YukiHookXposedModule {
 
     override fun onHook() =
-        YukiHookAPI.encase {
+        YukiHook.encase {
             loadApp(
-                isExcludeSelf = true,
+                excludeSelf = true,
                 MeizuProvider(
                     providerPackageName = Constants.PROVIDER_PACKAGE_NAME,
                     logo = ProviderLogo.fromBase64(Constants.ICON)
@@ -29,7 +29,7 @@ open class HookEntry : IYukiHookXposedInit {
             )
         }
 
-    override fun onInit() = YukiHookAPI.configs {
-        debugLog { tag = "MeizhuProvider" }
+    override fun onInit() = YukiHook.configure {
+        logging { tag = "MeizhuProvider" }
     }
 }

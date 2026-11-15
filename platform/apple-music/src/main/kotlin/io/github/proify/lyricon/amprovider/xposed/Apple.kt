@@ -10,6 +10,8 @@ import android.app.Application
 import android.media.MediaMetadata
 import com.highcapable.kavaref.KavaRef.Companion.resolve
 import com.highcapable.kavaref.condition.type.VagueType
+import com.highcapable.yukihookapi.extension.kavaref.hook
+import com.highcapable.yukihookapi.extension.kavaref.toClass
 import com.highcapable.yukihookapi.hook.entity.YukiBaseHooker
 import com.highcapable.yukihookapi.hook.log.YLog
 import de.robv.android.xposed.XposedHelpers
@@ -30,21 +32,8 @@ import java.lang.reflect.Method
 /**
  * Apple Music 注入入口：
  * 注册 Provider，Hook 切歌 / 歌词构建 / 播放器控制，并向 Provider 同步播放进度。
- *
- * 适配 Apple Music 7.0.0-beta：
- * - 偏好设置类已被混淆（见 [PreferencesMonitor]），初始化不再因单个 Hook 缺失而整体失败；
- * - 位置读取增加 LocalMediaPlayerController 兜底，避免 ExoMediaPlayer 实例捕获失败后进度不动。
  */
 object Apple : YukiBaseHooker() {
-
-    private const val TAG = "AMProvider"
-
-    private const val CLASS_PLAYER_LYRICS_VIEW_MODEL =
-        "com.apple.android.music.player.viewmodel.PlayerLyricsViewModel"
-    private const val CLASS_EXO_MEDIA_PLAYER =
-        "com.apple.android.music.playback.player.ExoMediaPlayer"
-    private const val CLASS_LOCAL_MEDIA_PLAYER_CONTROLLER =
-        "com.apple.android.music.playback.controller.LocalMediaPlayerController"
 
     private lateinit var application: Application
     private lateinit var classLoader: ClassLoader
@@ -56,10 +45,6 @@ object Apple : YukiBaseHooker() {
     private var exoMediaPlayerInstance: Any? = null
     private var getPositionMethod: Method? = null
 
-    /** 兜底进度来源：LocalMediaPlayerController#getCurrentPosition()。 */
-    private var mediaPlayerControllerInstance: Any? = null
-    private var controllerPositionMethod: Method? = null
-
     // 进度同步协程
     private val coroutineScope by lazy { CoroutineScope(Dispatchers.Default + SupervisorJob()) }
     private var progressJob: Job? = null
@@ -67,25 +52,22 @@ object Apple : YukiBaseHooker() {
     private var provider: LyriconProvider? = null
 
     override fun onHook() {
-        onAppLifecycle {
-            onCreate { onAppCreate() }
-        }
+        registerAppLifecycle(true) { onCreate { onAppCreate() } }
     }
 
     //region 初始化
 
     private fun onAppCreate() {
-        application = appContext ?: return
-        classLoader = appClassLoader ?: return
+        application = hostApplication ?: return
+        classLoader = hostClassLoader ?: return
 
-        // 任何一项初始化失败都不应中断整体流程：目标 App 的混淆名可能随版本变化。
-        hookSafely("PreferencesMonitor") { PreferencesMonitor.initialize(application) }
+        PreferencesMonitor.initialize(application)
         PreferencesMonitor.listener = object : PreferencesMonitor.Listener {
             override fun onTranslationSelectedChanged(selected: Boolean) {
                 provider?.player?.setDisplayTranslation(selected)
             }
         }
-        hookSafely("DiskSongManager") { DiskSongManager.initialize(application) }
+        DiskSongManager.initialize(application)
 
         initScreenStateMonitor()
         initProvider()
@@ -106,25 +88,17 @@ object Apple : YukiBaseHooker() {
             requester = LyricRequester(classLoader, application)
         )
 
-        helper.player.setDisplayTranslation(PreferencesMonitor.resolveDisplayTranslation())
+        helper.player.setDisplayTranslation(PreferencesMonitor.isTranslationSelected())
         helper.register()
         provider = helper
         YLog.debug("Apple: Lyricon provider registered")
     }
 
     private fun startHooks() {
-        hookSafely("MediaSession.setMetadata") { hookMediaMetadataChange() }
-        hookSafely("PlayerLyricsViewModel.buildTimeRangeToLyricsMap") { hookLyricBuildMethod() }
-        hookSafely("ExoMediaPlayer") { hookExoMediaPlayer() }
+        hookMediaMetadataChange()
+        hookLyricBuildMethod()
+        hookExoMediaPlayer()
         YLog.debug("Apple: All hooks registered")
-    }
-
-    private fun hookSafely(name: String, block: () -> Unit) {
-        try {
-            block()
-        } catch (e: Throwable) {
-            YLog.error(tag = TAG, msg = "Apple: failed to hook $name", e = e)
-        }
     }
 
     //endregion
@@ -153,7 +127,7 @@ object Apple : YukiBaseHooker() {
     //region Hook 2: 歌词构建完成（PlayerLyricsViewModel.buildTimeRangeToLyricsMap）
 
     private fun hookLyricBuildMethod() {
-        classLoader.loadClass(CLASS_PLAYER_LYRICS_VIEW_MODEL)
+        classLoader.loadClass("com.apple.android.music.player.viewmodel.PlayerLyricsViewModel")
             .resolve()
             .firstMethod { name = "buildTimeRangeToLyricsMap" }
             .hook {
@@ -176,17 +150,15 @@ object Apple : YukiBaseHooker() {
     //region Hook 3: 播放器控制（ExoMediaPlayer / LocalMediaPlayerController）
 
     private fun hookExoMediaPlayer() {
-        val exoPlayerClass = classLoader.loadClass(CLASS_EXO_MEDIA_PLAYER)
+        val exoPlayerClass =
+            classLoader.loadClass("com.apple.android.music.playback.player.ExoMediaPlayer")
 
         // 缓存播放器实例与进度读取方法
         exoPlayerClass.declaredConstructors.forEach { constructor ->
             constructor.hook {
                 after {
                     exoMediaPlayerInstance = instanceOrNull
-                    getPositionMethod = runCatching {
-                        instanceClass?.getDeclaredMethod("getCurrentPosition")
-                    }.getOrNull()
-                    YLog.debug("Apple: ExoMediaPlayer captured")
+                    getPositionMethod = instanceOrNull?.javaClass?.getDeclaredMethod("getCurrentPosition")
                 }
             }
         }
@@ -197,34 +169,19 @@ object Apple : YukiBaseHooker() {
             parameters(Long::class)
         }.hook {
             after {
-                val position = args(0).cast<Long>() ?: 0L
+                val position = arg(0).get<Long>() ?: 0L
                 if (isPlaying) provider?.player?.seekTo(position)
             }
         }
 
-        val controllerClass = classLoader.loadClass(CLASS_LOCAL_MEDIA_PLAYER_CONTROLLER)
-
-        // 兜底进度来源：控制器实例一定会在播放前构造
-        controllerClass.declaredConstructors.forEach { constructor ->
-            constructor.hook {
-                after {
-                    mediaPlayerControllerInstance = instanceOrNull
-                    controllerPositionMethod = runCatching {
-                        instanceClass?.getDeclaredMethod("getCurrentPosition")
-                    }.getOrNull()
-                }
-            }
-        }
-
         // 播放状态切换时启停进度同步
-        controllerClass
+        classLoader.loadClass("com.apple.android.music.playback.controller.LocalMediaPlayerController")
             .resolve()
             .method {
                 name = "onPlaybackStateChanged"
                 parameters(VagueType, Int::class, Int::class)
             }.first().hook {
                 after {
-                    mediaPlayerControllerInstance = mediaPlayerControllerInstance ?: instanceOrNull
                     when (PlaybackState.from(args[2] as Int)) {
                         PlaybackState.PLAYING -> startProgressSync()
                         else -> stopProgressSync()
@@ -263,18 +220,10 @@ object Apple : YukiBaseHooker() {
     }
 
     private fun updatePosition() {
-        provider?.player?.setPosition(readPosition())
-    }
-
-    /** 依次尝试 ExoMediaPlayer / LocalMediaPlayerController，两者都不可用时返回 0。 */
-    private fun readPosition(): Long {
-        readPositionFrom(exoMediaPlayerInstance, getPositionMethod)?.let { return it }
-        return readPositionFrom(mediaPlayerControllerInstance, controllerPositionMethod) ?: 0L
-    }
-
-    private fun readPositionFrom(instance: Any?, method: Method?): Long? {
-        if (instance == null || method == null) return null
-        return runCatching { method.invoke(instance) as? Long }.getOrNull()
+        val position = runCatching {
+            getPositionMethod?.invoke(exoMediaPlayerInstance) as? Long ?: 0L
+        }.getOrDefault(0L)
+        provider?.player?.setPosition(position)
     }
 
     private fun stopProgressLoop() {

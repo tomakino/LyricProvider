@@ -6,24 +6,27 @@
 
 package io.github.proify.lyricon.musicfreeprovider.xposed
 
-import com.highcapable.yukihookapi.YukiHookAPI
-import com.highcapable.yukihookapi.annotation.xposed.InjectYukiHookWithXposed
-import com.highcapable.yukihookapi.hook.xposed.proxy.IYukiHookXposedInit
-import io.github.proify.lyricon.musicfreeprovider.xposed.Constants.PROVIDER_PACKAGE_NAME
+import com.highcapable.yukihookapi.YukiHook
+import com.highcapable.yukihookapi.annotation.xposed.YukiHookLibXposedEntry
+import com.highcapable.yukihookapi.hook.xposed.YukiHookXposedModule
 
-@InjectYukiHookWithXposed(modulePackageName = PROVIDER_PACKAGE_NAME)
-open class HookEntry : IYukiHookXposedInit {
+@YukiHookLibXposedEntry(
+    targetApiVersion = 101,
+    scope = arrayOf("fun.upup.musicfree"),
+    staticScope = true
+)
+open class HookEntry : YukiHookXposedModule {
 
     override fun onHook() {
-        YukiHookAPI.encase {
+        YukiHook.encase {
             loadApp("fun.upup.musicfree", MusicFree())
         }
     }
 
     override fun onInit() {
         super.onInit()
-        YukiHookAPI.configs {
-            debugLog {
+        YukiHook.configure {
+            logging {
                 tag = "MusicFreeProvider"
             }
         }

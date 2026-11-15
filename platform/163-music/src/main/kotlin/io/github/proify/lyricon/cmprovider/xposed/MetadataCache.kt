@@ -20,7 +20,8 @@ data class Metadata(
     val id: Long,
     val title: String?,
     val artist: String?,
-    val duration: Long
+    val duration: Long,
+    val lyric: String? = null
 )
 
 object MediaMetadataCache {
@@ -50,11 +51,13 @@ object MediaMetadataCache {
             } else null
         }.getOrNull()
 
-        val data = Metadata(id,
+        val data = Metadata(
+            id,
             title,
             artist,
             duration,
-            lyric)
+            lyric
+        )
         map[id] = data
         return data
     }

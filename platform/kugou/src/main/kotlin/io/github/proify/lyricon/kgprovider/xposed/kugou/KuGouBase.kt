@@ -9,6 +9,8 @@ package io.github.proify.lyricon.kgprovider.xposed.kugou
 import android.media.MediaMetadata
 import android.media.session.PlaybackState
 import com.highcapable.kavaref.KavaRef.Companion.resolve
+import com.highcapable.yukihookapi.extension.kavaref.hook
+import com.highcapable.yukihookapi.extension.kavaref.toClass
 import com.highcapable.yukihookapi.hook.entity.YukiBaseHooker
 import com.highcapable.yukihookapi.hook.log.YLog
 import de.robv.android.xposed.XC_MethodHook
@@ -61,7 +63,7 @@ abstract class KuGouBase : YukiBaseHooker() {
         hookMediaSession()
         scope.launch { asyncHookLyricManager() }
 
-        onAppLifecycle {
+        registerAppLifecycle(true) {
             onCreate {
                 initProvider()
                 onAppCreate()
@@ -77,7 +79,7 @@ abstract class KuGouBase : YukiBaseHooker() {
      */
     private fun initProvider() {
         if (isInitialized) return
-        val ctx = appContext ?: return
+        val ctx = hostApplication ?: return
 
         try {
             provider = LyriconFactory.createProvider(
@@ -111,7 +113,7 @@ abstract class KuGouBase : YukiBaseHooker() {
                         paramTypes(String::class.java, Boolean::class.javaPrimitiveType)
                     }
                 }.singleOrNull()
-            return methodData?.getMethodInstance(appClassLoader!!)
+            return methodData?.getMethodInstance(hostClassLoader!!)
         }
 
 //        fun findLoadLyricMethodFromReflection(): Method? {

@@ -8,6 +8,8 @@ package io.github.proify.lyricon.lxprovider.xposed.variant.main
 
 import android.util.Log
 import com.highcapable.kavaref.KavaRef.Companion.resolve
+import com.highcapable.yukihookapi.extension.kavaref.hook
+import com.highcapable.yukihookapi.extension.kavaref.toClassOrNull
 import com.highcapable.yukihookapi.hook.entity.YukiBaseHooker
 import io.github.proify.lyricon.lxprovider.xposed.Constants
 import io.github.proify.lyricon.lxprovider.xposed.variant.main.Converter.toSong
@@ -22,6 +24,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.milliseconds
 
 open class LXMusic(private val lyricModuleClass: String = "cn.toside.music.mobile.lyric.LyricModule") :
     YukiBaseHooker() {
@@ -40,7 +43,7 @@ open class LXMusic(private val lyricModuleClass: String = "cn.toside.music.mobil
     private var syncJob: Job? = null
 
     private val provider: LyriconProvider by lazy {
-        val context = appContext ?: error("AppContext is required")
+        val context = hostApplication ?: error("AppContext is required")
         LyriconFactory.createProvider(
             context = context,
             providerPackageName = Constants.PROVIDER_PACKAGE_NAME,
@@ -50,7 +53,7 @@ open class LXMusic(private val lyricModuleClass: String = "cn.toside.music.mobil
     }
 
     override fun onHook() {
-        onAppLifecycle {
+        registerAppLifecycle(true) {
             onCreate {
                 provider.register()
                 injectLyricModule()
@@ -112,7 +115,7 @@ open class LXMusic(private val lyricModuleClass: String = "cn.toside.music.mobil
     private fun updateLyric(lyric: String, trans: String?, roma: String?) {
         val richLyric = Converter.toRich(lyric, trans, roma)
         val songId =
-            (lyric.hashCode() + (trans?.hashCode() ?: 0) + (roma?.hashCode() ?: 0)).toString()
+            (lyric.hashCode() + trans.hashCode() + roma.hashCode()).toString()
         provider.player.setSong(richLyric.toSong(songId))
     }
 
@@ -158,7 +161,7 @@ open class LXMusic(private val lyricModuleClass: String = "cn.toside.music.mobil
         syncJob = scope.launch {
             while (isActive) {
                 provider.player.setPosition(calculateCurrentPosition())
-                delay(ProviderConstants.DEFAULT_POSITION_UPDATE_INTERVAL)
+                delay(ProviderConstants.DEFAULT_POSITION_UPDATE_INTERVAL.milliseconds)
             }
         }
     }

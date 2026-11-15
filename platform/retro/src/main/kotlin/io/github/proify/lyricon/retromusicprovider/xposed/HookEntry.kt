@@ -5,22 +5,26 @@
  */
 package io.github.proify.lyricon.retromusicprovider.xposed
 
-import com.highcapable.yukihookapi.YukiHookAPI
-import com.highcapable.yukihookapi.annotation.xposed.InjectYukiHookWithXposed
-import com.highcapable.yukihookapi.hook.xposed.proxy.IYukiHookXposedInit
+import com.highcapable.yukihookapi.YukiHook
+import com.highcapable.yukihookapi.annotation.xposed.YukiHookLibXposedEntry
+import com.highcapable.yukihookapi.hook.xposed.YukiHookXposedModule
 
-@InjectYukiHookWithXposed(modulePackageName = Constants.PROVIDER_PACKAGE_NAME)
-class HookEntry : IYukiHookXposedInit {
+@YukiHookLibXposedEntry(
+    targetApiVersion = 101,
+    scope = arrayOf("code.name.monkey.retromusic"),
+    staticScope = true
+)
+class HookEntry : YukiHookXposedModule {
     override fun onHook() {
-        YukiHookAPI.encase {
+        YukiHook.encase {
             loadApp(Constants.MUSIC_PACKAGE_NAME, RetroMusic)
         }
     }
 
     override fun onInit() {
         super.onInit()
-        YukiHookAPI.configs {
-            debugLog { tag = Constants.LOG_TAG }
+        YukiHook.configure {
+            logging { tag = Constants.LOG_TAG }
         }
     }
 }

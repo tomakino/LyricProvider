@@ -6,21 +6,25 @@
 
 package io.github.proify.lyricon.paprovider.xposed
 
-import com.highcapable.yukihookapi.annotation.xposed.InjectYukiHookWithXposed
-import com.highcapable.yukihookapi.hook.factory.configs
+import com.highcapable.yukihookapi.annotation.xposed.YukiHookLibXposedEntry
+import com.highcapable.yukihookapi.hook.factory.configure
 import com.highcapable.yukihookapi.hook.factory.encase
-import com.highcapable.yukihookapi.hook.xposed.proxy.IYukiHookXposedInit
+import com.highcapable.yukihookapi.hook.xposed.YukiHookXposedModule
 
-@InjectYukiHookWithXposed
-class HookEntry : IYukiHookXposedInit {
+@YukiHookLibXposedEntry(
+    targetApiVersion = 101,
+    scope = arrayOf("com.maxmpz.audioplayer", "com.maxmpz.audioplayer.unlock"),
+    staticScope = true
+)
+class HookEntry : YukiHookXposedModule {
 
     override fun onHook() = encase {
         loadApp(name = "com.maxmpz.audioplayer", PowerAmp)
     }
 
-    override fun onInit() = configs {
-        isDebug = true
-        debugLog {
+    override fun onInit() = configure {
+        debug = true
+        logging {
             tag = Constants.LOG_TAG
         }
     }

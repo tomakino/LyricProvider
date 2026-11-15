@@ -7,7 +7,6 @@
 package io.github.proify.lyricon.paprovider.xposed
 
 import android.os.Bundle
-import kotlinx.serialization.Serializable
 
 object TrackMetadataCache {
     private val map = mutableMapOf<String, TrackMetadata>()
@@ -38,7 +37,6 @@ object TrackMetadataCache {
     fun get(id: String): TrackMetadata? = map[id]
 }
 
-@Serializable
 data class TrackMetadata(
     val raw: Bundle,
     val id: String,

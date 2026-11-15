@@ -6,24 +6,28 @@
 
 package io.github.proify.lyricon.cloudprovider.xposed
 
-import com.highcapable.yukihookapi.YukiHookAPI
-import com.highcapable.yukihookapi.annotation.xposed.InjectYukiHookWithXposed
-import com.highcapable.yukihookapi.hook.xposed.proxy.IYukiHookXposedInit
+import com.highcapable.yukihookapi.YukiHook
+import com.highcapable.yukihookapi.annotation.xposed.YukiHookLibXposedEntry
+import com.highcapable.yukihookapi.hook.xposed.YukiHookXposedModule
 import io.github.proify.lyricon.cloudprovider.xposed.Constants.PROVIDER_PACKAGE_NAME
 
-@InjectYukiHookWithXposed(modulePackageName = PROVIDER_PACKAGE_NAME)
-open class HookEntry : IYukiHookXposedInit {
+@YukiHookLibXposedEntry(
+    targetApiVersion = 101,
+    scope = arrayOf("cn.kuwo.player"),
+    staticScope = true
+)
+open class HookEntry : YukiHookXposedModule {
 
     override fun onHook() {
 
-        YukiHookAPI.encase {
-            loadApp(isExcludeSelf = true, CloudProvider)
+        YukiHook.encase {
+            loadApp(excludeSelf = true, CloudProvider)
         }
     }
 
     override fun onInit() {
-        YukiHookAPI.configs {
-            debugLog {
+        YukiHook.configure {
+            logging {
                 isEnable = true
                 tag = "CloudProvider "
             }
