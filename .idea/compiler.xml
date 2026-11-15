@@ -2,15 +2,37 @@
 <project version="4">
   <component name="CompilerConfiguration">
     <bytecodeTargetLevel target="17">
+      <module name="LyricProvider.163-music" target="21" />
+      <module name="LyricProvider.app" target="21" />
+      <module name="LyricProvider.apple-music" target="21" />
+      <module name="LyricProvider.bodian-music" target="21" />
+      <module name="LyricProvider.car-provider" target="21" />
+      <module name="LyricProvider.cloud-provider" target="21" />
       <module name="LyricProvider.clound-music" target="21" />
-      <module name="LyricProvider.common" target="21" />
+      <module name="LyricProvider.gramophone" target="21" />
+      <module name="LyricProvider.kugou-music" target="21" />
+      <module name="LyricProvider.kuwo-music" target="21" />
       <module name="LyricProvider.local-provider" target="21" />
+      <module name="LyricProvider.lx-music" target="21" />
       <module name="LyricProvider.meizhu-provider" target="21" />
+      <module name="LyricProvider.meizu-provider" target="21" />
+      <module name="LyricProvider.music-free" target="21" />
+      <module name="LyricProvider.poweramp-music" target="21" />
+      <module name="LyricProvider.qishui-music" target="21" />
+      <module name="LyricProvider.qq-music" target="21" />
+      <module name="LyricProvider.qq-music-hd" target="21" />
+      <module name="LyricProvider.retro-music" target="21" />
       <module name="LyricProvider.salt-player-music" target="21" />
       <module name="LyricProvider.share.car-lyric-provider" target="21" />
+      <module name="LyricProvider.share.car-provider" target="21" />
       <module name="LyricProvider.share.common" target="21" />
+      <module name="LyricProvider.share.extensions-android" target="21" />
       <module name="LyricProvider.share.meizhu-provider" target="21" />
+      <module name="LyricProvider.share.meizu-provider" target="21" />
+      <module name="LyricProvider.splayer-provider" target="21" />
+      <module name="LyricProvider.spotify-music" target="21" />
       <module name="LyricProvider.super-lyric-provider" target="21" />
+      <module name="LyricProvider.symfonium" target="21" />
       <module name="LyricProvider.youtube-music" target="21" />
     </bytecodeTargetLevel>
   </component>

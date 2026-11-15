@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright 2026 Proify, Tomakino
+  ~ Licensed under the Apache License, Version 2.0
+  ~ http://www.apache.org/licenses/LICENSE-2.0
+  -->
+
+<resources>
+    <!-- 黑白灰方案 - 深色模式 -->
+    <color name="colorPrimary">#FFFFFF</color>
+    <color name="colorOnPrimary">#000000</color>
+
+    <!-- 背景与卡片 -->
+    <color name="colorSurface">#000000</color>
+    <color name="colorOnSurface">#F5F5F5</color> <!-- 近纯白 -->
+    <color name="colorSurfaceVariant">#1E1E1E</color> <!-- 深灰卡片 -->
+    <color name="colorOnSurfaceVariant">#BDBDBD</color> <!-- 浅灰描述 -->
+
+    <!-- 分割线 -->
+    <color name="colorOutlineVariant">#333333</color>
+
+    <!-- 图标 -->
+    <color name="ic_launcher_background">#000000</color>
+    <color name="ic_launcher_foreground">#FFFFFF</color>
+</resources>

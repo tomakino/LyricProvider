@@ -17,24 +17,26 @@
 
 ### Core Adaptations
 
-| Platform                             | Identifier          | Description                                        |
-|:-------------------------------------|:--------------------|:---------------------------------------------------|
-| 🍎 **Apple Music**                   | `apple-music`       | Supports dynamic lyrics, translated lyrics         |
+| Platform                             | Identifier          | Description                                         |
+|:-------------------------------------|:--------------------|:----------------------------------------------------|
+| 🍎 **Apple Music**                   | `apple-music`       | Supports dynamic lyrics, translated lyrics          |
 | ☁️ **Netease Music**                 | `163-music`         | Supports dynamic/translated lyrics; Modern API 101+ |
-| 🐧 **QQ Music**                      | `qq-music`          | Supports dynamic lyrics, translated lyrics         |
-| 🐧 **QQ Music HD**                   | `qq-music-hd`       | Supports dynamic lyrics, translated lyrics         |
-| 🔵 **Bodian Music**                  | `bodian-music`      | Word-by-word lyrics, works offline                 |
-| 🧊 **LX Music**                      | `lx-music`          | Supports translated lyrics display                 |
-| 🐶 **Kugou Music / Concept Edition** | `kugou-music`       | **Requires enabling car lyrics mode in the app**   |
-| 📻 **Kuwo Music**                    | `kuwo-music`        | **Requires enabling car lyrics mode in the app**   |
-| 🎧 **Spotify**                       | `spotify-music`     | Supports standard lyrics and per-word lyrics       |
-| ⚡ **Poweramp**                       | `poweramp-music`    | Supports online matching and embedded local lyrics |
-| 🧂 **Salt Music**                    | `salt-player-music` | Adapted based on Meizu standard lyric interface    |
-| 🎵 **Qishui Music**                  | `qishui-music`      | Supports dynamic lyrics, translated lyrics         |
-| 🎵 **MusicFree**                     | `music-free`        | Support translation                                |
-| 🎵 **Feiniu Music**                  | `feiniu-music`      | Current-line text lyrics and playback state sync   |
+| 🐧 **QQ Music**                      | `qq-music`          | Supports dynamic lyrics, translated lyrics          |
+| 🐧 **QQ Music HD**                   | `qq-music-hd`       | Supports dynamic lyrics, translated lyrics          |
+| 🔵 **Bodian Music**                  | `bodian`      | Word-by-word lyrics, works offline                  |
+| 🧊 **LX Music**                      | `lx`          | Supports translated lyrics display                  |
+| 🐶 **Kugou Music / Concept Edition** | `kugou`       | **Requires enabling car lyrics mode in the app**    |
+| 📻 **Kuwo Music**                    | `kuwo`        | **Requires enabling car lyrics mode in the app**    |
+| 🎧 **Spotify**                       | `spotify`     | Supports standard lyrics and per-word lyrics        |
+| ⚡ **Poweramp**                       | `poweramp`    | Supports online matching and embedded local lyrics  |
+| 🧂 **Salt Music**                    | `salt-player-music` | Adapted based on Meizu standard lyric interface     |
+| 🎵 **Qishui Music**                  | `qishui`      | Supports dynamic lyrics, translated lyrics          |
+| 🎵 **MusicFree**                     | `music-free`        | Support translation                                 |
 
-> **Netease module compatibility:** Starting with 1.1.0-beta1, `163-music` ships as a single Modern API APK and requires LSPosed Modern API 101 or newer. It cannot be loaded by LSPosed 1.9.2, which only supports the Legacy API. All other provider modules remain on the Legacy API and are unaffected.
+> **Netease module compatibility:** Starting with 1.1.0-beta1, `163-music` ships as a single Modern
+> API APK and requires LSPosed Modern API 101 or newer. It cannot be loaded by LSPosed 1.9.2, which
+> only supports the Legacy API. All other provider modules remain on the Legacy API and are
+> unaffected.
 
 ### Universal / Special Modules
 

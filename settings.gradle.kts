@@ -32,37 +32,21 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "LyricProvider"
-include(":share:extensions-kt")
-include(":share:extensions-android")
 
-include(":share:qrckit")
-include(":share:lrckit")
-include(":share:yrckit")
-include(":share:amkit")
-include(":share:krckit")
-include(":share:cloudlyric")
-include(":share:meizu-provider")
-include(":share:car-provider")
+/**
+ * 自动 include 某个分组目录下的所有子模块。
+ * 只收目录，且必须存在 build.gradle.kts，避免把 build/ 等杂物当成模块。
+ */
+fun includeGroup(group: String) {
+    val dir = file(group)
+    if (!dir.isDirectory) return
+    dir.listFiles()
+        ?.filter { it.isDirectory && file("$group/${it.name}/build.gradle.kts").isFile }
+        ?.sortedBy { it.name }
+        ?.forEach { include(":$group:${it.name}") }
+}
 
-include(":cloud-provider")
-include(":meizu-provider")
-include(":car-provider")
-
-include(":splayer-provider")
-
-include(":apple-music")
-include(":163-music")
-include(":qq-music")
-include(":qq-music-hd")
-include(":bodian-music")
-include(":kugou-music")
-include(":kuwo-music")
-include(":spotify-music")
-include(":lx-music")
-include(":poweramp-music")
-include(":qishui-music")
-include(":music-free")
-include(":gramophone")
-include(":symfonium")
-include(":retro-music")
-include(":feiniu-music")
+includeGroup("platform")
+includeGroup("universal")
+includeGroup("protocol")
+includeGroup("common")

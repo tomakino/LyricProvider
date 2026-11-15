@@ -95,9 +95,9 @@ subprojects {
                             fileName.contains("armeabi-v7a") -> "-armeabi-v7a"
                             fileName.contains("x86_64") -> "-x86_64"
                             else -> ""
-                    }
+                        }
                         "${moduleName}-${versionName}-${buildType}${abiSuffix}.apk"
-                }
+                    }
                     duplicatesStrategy = DuplicatesStrategy.INCLUDE
 
                     // 关键点：Copy 完后，自动触发该类型的 Zip 任务
@@ -113,7 +113,7 @@ subprojects {
             tasks.matching { it.name == "assemble${variantName.replaceFirstChar { it.uppercase() }}" }
                 .configureEach {
                     finalizedBy(copyTask)
-            }
+                }
         }
     }
 }
