@@ -20,14 +20,11 @@ kotlin {
         jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
     }
 }
+
 dependencies {
-    implementation(project(":common:extensions-kt"))
-    implementation(project(":common:lrckit"))
-
+    implementation(project(":common:base:extensions-kt"))
     implementation(libs.kotlinx.serialization.json)
-    implementation(libs.lyricon.lyric.model)
-
-    implementation(libs.okhttp)
-    implementation(libs.okhttp.brotli)
     testImplementation(kotlin("test"))
+    implementation(project(":common:codec:lrckit"))
+    implementation(libs.lyricon.lyric.model)
 }

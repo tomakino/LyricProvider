@@ -42,7 +42,7 @@ configure<LibraryExtension> {
 }
 
 dependencies {
-    api(project(":common:extensions-kt"))
+    api(project(":common:base:extensions-kt"))
 
     implementation(libs.yukihookapi.api)
     implementation(libs.kavaref.core)

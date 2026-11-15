@@ -64,8 +64,8 @@ configure<ApplicationExtension> {
 }
 
 dependencies {
-    implementation(project(":common:extensions-android"))
-    implementation(project(":common:cloud-lyric-engine"))
+    implementation(project(":common:base:extensions-android"))
+    implementation(project(":common:base:cloud-lyric-engine"))
 
     implementation(libs.lyricon.provider)
     implementation(libs.kotlinx.serialization.json)

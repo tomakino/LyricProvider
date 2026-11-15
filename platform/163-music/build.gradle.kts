@@ -63,9 +63,9 @@ configure<ApplicationExtension> {
 }
 
 dependencies {
-    implementation(project(":common:extensions-kt"))
-    implementation(project(":common:lrckit"))
-    implementation(project(":common:yrckit"))
+    implementation(project(":common:base:extensions-kt"))
+    implementation(project(":common:codec:lrckit"))
+    implementation(project(":common:codec:yrckit"))
 
     implementation(libs.lyricon.provider)
     implementation(libs.kotlinx.serialization.json)

@@ -63,7 +63,7 @@ configure<ApplicationExtension> {
 }
 
 dependencies {
-    implementation(project(":common:extensions-android"))
+    implementation(project(":common:base:extensions-android"))
     implementation(project(":protocol:meizu"))
 
     implementation(libs.lyricon.provider)

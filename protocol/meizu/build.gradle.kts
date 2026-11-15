@@ -44,7 +44,7 @@ configure<LibraryExtension> {
 }
 
 dependencies {
-    implementation(project(":common:extensions-android"))
+    implementation(project(":common:base:extensions-android"))
     implementation(libs.lyricon.provider)
     implementation(libs.kotlinx.serialization.json)
 

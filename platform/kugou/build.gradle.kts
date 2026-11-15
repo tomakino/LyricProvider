@@ -61,9 +61,9 @@ configure<ApplicationExtension> {
 }
 
 dependencies {
-    implementation(project(":common:extensions-android"))
-    implementation(project(":common:lrckit"))
-    implementation(project(":common:krckit"))
+    implementation(project(":common:base:extensions-android"))
+    implementation(project(":common:codec:lrckit"))
+    implementation(project(":common:codec:krckit"))
 
     implementation(libs.dexkit)
     implementation(libs.lyricon.provider)

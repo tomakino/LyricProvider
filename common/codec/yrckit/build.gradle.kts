@@ -21,8 +21,8 @@ kotlin {
     }
 }
 dependencies {
-    implementation(project(":common:extensions-kt"))
-    implementation(project(":common:lrckit"))
+    implementation(project(":common:base:extensions-kt"))
+    implementation(project(":common:codec:lrckit"))
 
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.lyricon.lyric.model)

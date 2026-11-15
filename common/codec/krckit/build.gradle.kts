@@ -11,23 +11,23 @@ plugins {
     alias(libs.plugins.jetbrains.kotlin.jvm)
     kotlin("plugin.serialization") version "2.1.21"
 }
-
 java {
     sourceCompatibility = JavaVersion.VERSION_17
     targetCompatibility = JavaVersion.VERSION_17
 }
-
 kotlin {
     compilerOptions {
         jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
     }
 }
-
 dependencies {
-    implementation(libs.kotlinx.coroutines.core)
+    implementation(project(":common:base:extensions-kt"))
+    implementation(project(":common:codec:lrckit"))
+
     implementation(libs.kotlinx.serialization.json)
-    implementation(project(":common:lrckit"))
-    implementation(project(":common:qrckit"))
     implementation(libs.lyricon.lyric.model)
+
+    implementation(libs.okhttp)
+    implementation(libs.okhttp.brotli)
     testImplementation(kotlin("test"))
 }

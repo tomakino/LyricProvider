@@ -62,10 +62,10 @@ configure<ApplicationExtension> {
 }
 
 dependencies {
-    implementation(project(":common:extensions-android"))
+    implementation(project(":common:base:extensions-android"))
 
-    implementation(project(":common:lrckit"))
-    implementation(project(":common:qrckit"))
+    implementation(project(":common:codec:lrckit"))
+    implementation(project(":common:codec:qrckit"))
 
     implementation(libs.lyricon.provider)
     implementation(libs.kotlinx.coroutines.core)

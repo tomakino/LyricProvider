@@ -46,7 +46,26 @@ fun includeGroup(group: String) {
         ?.forEach { include(":$group:${it.name}") }
 }
 
+fun includeTree(root: String) {
+    fun visit(rel: String) {
+        val dir = file(rel)
+        if (!dir.isDirectory) return
+        dir.listFiles()
+            ?.filter { it.isDirectory }
+            ?.sortedBy { it.name }
+            ?.forEach { sub ->
+                val child = "$rel/${sub.name}"
+                if (file("$child/build.gradle.kts").isFile) {
+                    include(":${child.replace('/', ':')}")
+                } else {
+                    visit(child)
+                }
+            }
+    }
+    visit(root)
+}
+
 includeGroup("platform")
 includeGroup("universal")
 includeGroup("protocol")
-includeGroup("common")
+includeTree("common")

@@ -62,7 +62,7 @@ configure<ApplicationExtension> {
 }
 
 dependencies {
-    implementation(project(":common:extensions-android"))
+    implementation(project(":common:base:extensions-android"))
     implementation(libs.okhttp)
     implementation(libs.dexkit)
 
