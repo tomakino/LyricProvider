@@ -4,7 +4,7 @@
  * http://www.apache.org/licenses/LICENSE-2.0
  */
 
-package io.github.proify.lyricon.amprovider.xposed
+package io.github.proify.lyricon.amprovider.xposed.playback
 
 /** Apple Music 播放器内的状态枚举。 */
 enum class PlaybackState(private val value: Int) {

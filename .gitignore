@@ -16,6 +16,7 @@
 /build
 **/build/
 /build-logic/**/build/
+.dsh-plugins/
 /captures
 .externalNativeBuild
 .cxx

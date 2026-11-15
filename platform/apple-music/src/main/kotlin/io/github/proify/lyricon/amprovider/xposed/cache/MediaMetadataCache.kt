@@ -4,7 +4,7 @@
  * http://www.apache.org/licenses/LICENSE-2.0
  */
 
-package io.github.proify.lyricon.amprovider.xposed
+package io.github.proify.lyricon.amprovider.xposed.cache
 
 import android.media.MediaMetadata
 import kotlinx.serialization.Serializable

@@ -19,6 +19,12 @@ import io.github.proify.extensions.android.ScreenStateMonitor
 import io.github.proify.lyricon.provider.LyriconFactory
 import io.github.proify.lyricon.provider.LyriconProvider
 import io.github.proify.lyricon.provider.ProviderConstants
+import io.github.proify.lyricon.amprovider.xposed.cache.LyricsCache
+import io.github.proify.lyricon.amprovider.xposed.cache.MediaMetadataCache
+import io.github.proify.lyricon.amprovider.xposed.lyrics.AmkitLyricsSource
+import io.github.proify.lyricon.amprovider.xposed.playback.PlaybackManager
+import io.github.proify.lyricon.amprovider.xposed.playback.PlaybackState
+import io.github.proify.lyricon.amprovider.xposed.prefs.PreferencesMonitor
 import io.github.proify.lyricon.provider.ProviderLogo
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -41,8 +47,6 @@ object Apple : YukiBaseHooker() {
 
     private const val TAG = "AMProvider"
 
-    private const val CLASS_PLAYER_LYRICS_VIEW_MODEL =
-        "com.apple.android.music.player.viewmodel.PlayerLyricsViewModel"
     private const val CLASS_EXO_MEDIA_PLAYER =
         "com.apple.android.music.playback.player.ExoMediaPlayer"
     private const val CLASS_LOCAL_MEDIA_PLAYER_CONTROLLER =
@@ -85,7 +89,7 @@ object Apple : YukiBaseHooker() {
                 provider?.player?.setDisplayTranslation(selected)
             }
         }
-        hookSafely("DiskSongManager") { DiskSongManager.initialize(application) }
+        hookSafely("LyricsCache") { LyricsCache.initialize(application) }
 
         initScreenStateMonitor()
         initProvider()
@@ -103,7 +107,8 @@ object Apple : YukiBaseHooker() {
 
         PlaybackManager.init(
             remotePlayer = helper.player,
-            requester = LyricRequester(classLoader, application)
+            source = AmkitLyricsSource(application),
+            coroutineScope = coroutineScope
         )
 
         helper.player.setDisplayTranslation(PreferencesMonitor.resolveDisplayTranslation())
@@ -114,7 +119,6 @@ object Apple : YukiBaseHooker() {
 
     private fun startHooks() {
         hookSafely("MediaSession.setMetadata") { hookMediaMetadataChange() }
-        hookSafely("PlayerLyricsViewModel.buildTimeRangeToLyricsMap") { hookLyricBuildMethod() }
         hookSafely("ExoMediaPlayer") { hookExoMediaPlayer() }
         YLog.debug("Apple: All hooks registered")
     }
@@ -144,29 +148,6 @@ object Apple : YukiBaseHooker() {
 
                     YLog.debug("Apple: Metadata changed -> ${metadata.id}")
                     PlaybackManager.onSongChanged(metadata.id)
-                }
-            }
-    }
-
-    //endregion
-
-    //region Hook 2: 歌词构建完成（PlayerLyricsViewModel.buildTimeRangeToLyricsMap）
-
-    private fun hookLyricBuildMethod() {
-        classLoader.loadClass(CLASS_PLAYER_LYRICS_VIEW_MODEL)
-            .resolve()
-            .firstMethod { name = "buildTimeRangeToLyricsMap" }
-            .hook {
-                after {
-                    YLog.debug("Apple: buildTimeRangeToLyricsMap args=$args")
-                    val arg = args.getOrNull(0) ?: run {
-                        YLog.debug("Apple: buildTimeRangeToLyricsMap args0 is null")
-                        return@after
-                    }
-
-                    val songNative = XposedHelpers.callMethod(arg, "get")
-                    YLog.debug("Apple: Lyrics built, native song=$songNative")
-                    PlaybackManager.onLyricsBuilt(songNative)
                 }
             }
     }
