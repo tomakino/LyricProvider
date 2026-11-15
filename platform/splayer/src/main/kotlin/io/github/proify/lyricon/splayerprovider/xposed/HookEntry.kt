@@ -26,7 +26,7 @@ open class HookEntry : YukiHookXposedModule {
     override fun onInit() {
         YukiHook.configure {
             logging {
-                Config.enabled = true
+                enabled = true
                 tag = "SPlayerProvider"
             }
         }
