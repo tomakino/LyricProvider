@@ -14,8 +14,8 @@ android {
 
     defaultConfig {
         applicationId = "io.github.proify.lyricon.amprovider"
-        versionCode = 6
-        versionName = "1.0.30"
+        versionCode = 7
+        versionName = "1.0.31"
     }
 }
 
