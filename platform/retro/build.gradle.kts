@@ -4,61 +4,22 @@
  * http://www.apache.org/licenses/LICENSE-2.0
  */
 
-import com.android.build.api.dsl.ApplicationExtension
-import jdk.internal.jshell.debug.InternalDebugControl.release
-
 plugins {
-    alias(libs.plugins.android.application)
-    alias(libs.plugins.ksp)
+    id("lyricon.android.application")
+    id("lyricon.yukihook")
 }
 
-configure<ApplicationExtension> {
+android {
     namespace = "io.github.proify.lyricon.retromusicprovider"
-    compileSdk {
-        version = release(rootProject.extra.get("compileSdkVersion") as Int)
-    }
 
     defaultConfig {
         applicationId = "io.github.proify.lyricon.retromusicprovider"
-        minSdk = 27
-        targetSdk = rootProject.extra.get("targetSdkVersion") as Int
         versionCode = 1
         versionName = "1.0.0"
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-    }
-
-    buildTypes {
-        getByName("release") {
-            signingConfig = signingConfigs.getByName("debug")
-            isMinifyEnabled = true
-            isShrinkResources = true
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
-        }
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
-    }
-
-    buildFeatures {
-        buildConfig = true
     }
 }
 
 dependencies {
     implementation(project(":common:base:extensions-android"))
     implementation(project(":common:codec:lrckit"))
-
-    implementation(libs.lyricon.provider)
-    implementation(libs.yukihookapi.api)
-    implementation(libs.kavaref.core)
-    implementation(libs.kavaref.extension)
-    compileOnly(libs.xposed.api)
-    ksp(libs.yukihookapi.ksp.xposed)
-
-    implementation(libs.androidx.core.ktx)
 }

@@ -9,6 +9,7 @@
       <module name="LyricProvider.car-provider" target="21" />
       <module name="LyricProvider.cloud-provider" target="21" />
       <module name="LyricProvider.clound-music" target="21" />
+      <module name="LyricProvider.common.extensions-android" target="21" />
       <module name="LyricProvider.gramophone" target="21" />
       <module name="LyricProvider.kugou-music" target="21" />
       <module name="LyricProvider.kuwo-music" target="21" />

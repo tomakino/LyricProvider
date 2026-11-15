@@ -4,60 +4,18 @@
  * http://www.apache.org/licenses/LICENSE-2.0
  */
 
-import com.android.build.api.dsl.ApplicationExtension
-import jdk.internal.jshell.debug.InternalDebugControl.release
-
 plugins {
-    alias(libs.plugins.android.application)
-    alias(libs.plugins.ksp)
+    id("lyricon.android.application")
+    id("lyricon.yukihook")
 }
 
-configure<ApplicationExtension> {
+android {
     namespace = "io.github.proify.lyricon.symfoniumprovider"
-    compileSdk {
-        version = release(rootProject.extra.get("compileSdkVersion") as Int)
-    }
 
     defaultConfig {
         applicationId = "io.github.proify.lyricon.symfoniumprovider"
-        minSdk = 27
-        targetSdk = rootProject.extra.get("targetSdkVersion") as Int
         versionCode = 1
         versionName = "1.0.0"
-
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-    }
-
-    signingConfigs {
-        create("release") {
-            storeFile = file(System.getenv("RELEASE_STORE_FILE") ?: "release.jks")
-            storePassword = System.getenv("RELEASE_STORE_PASSWORD")
-            keyAlias = System.getenv("RELEASE_KEY_ALIAS")
-            keyPassword = System.getenv("RELEASE_KEY_PASSWORD")
-        }
-    }
-
-    buildTypes {
-        getByName("debug") {
-            signingConfig = signingConfigs.getByName("release")
-        }
-        getByName("release") {
-            signingConfig = signingConfigs.getByName("release")
-            isMinifyEnabled = true
-            isShrinkResources = true
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
-        }
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
-    }
-    buildFeatures {
-        buildConfig = true
     }
 }
 
@@ -66,19 +24,5 @@ dependencies {
     implementation(project(":common:codec:lrckit"))
     implementation(project(":common:codec:krckit"))
     implementation(libs.taglib)
-
     implementation(libs.dexkit)
-    implementation(libs.lyricon.provider)
-    implementation(libs.kotlinx.serialization.json)
-
-    implementation(libs.yukihookapi.api)
-    implementation(libs.kavaref.core)
-    implementation(libs.kavaref.extension)
-    compileOnly(libs.xposed.api)
-    ksp(libs.yukihookapi.ksp.xposed)
-
-    implementation(libs.androidx.core.ktx)
-    testImplementation(libs.junit)
-    androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.androidx.espresso.core)
 }

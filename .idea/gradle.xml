@@ -4,20 +4,36 @@
   <component name="GradleSettings">
     <option name="linkedExternalProjectsSettings">
       <GradleProjectSettings>
+        <compositeConfiguration>
+          <compositeBuild compositeDefinitionSource="SCRIPT">
+            <builds>
+              <build path="$PROJECT_DIR$/build-logic" name="build-logic">
+                <projects>
+                  <project path="$PROJECT_DIR$/build-logic" />
+                  <project path="$PROJECT_DIR$/build-logic/convention" />
+                </projects>
+              </build>
+            </builds>
+          </compositeBuild>
+        </compositeConfiguration>
         <option name="testRunner" value="CHOOSE_PER_TEST" />
         <option name="externalProjectPath" value="$PROJECT_DIR$" />
         <option name="modules">
           <set>
             <option value="$PROJECT_DIR$" />
+            <option value="$PROJECT_DIR$/build-logic" />
+            <option value="$PROJECT_DIR$/build-logic/convention" />
             <option value="$PROJECT_DIR$/common" />
-            <option value="$PROJECT_DIR$/common/amkit" />
-            <option value="$PROJECT_DIR$/common/cloud-lyric-engine" />
-            <option value="$PROJECT_DIR$/common/extensions-android" />
-            <option value="$PROJECT_DIR$/common/extensions-kt" />
-            <option value="$PROJECT_DIR$/common/krckit" />
-            <option value="$PROJECT_DIR$/common/lrckit" />
-            <option value="$PROJECT_DIR$/common/qrckit" />
-            <option value="$PROJECT_DIR$/common/yrckit" />
+            <option value="$PROJECT_DIR$/common/base" />
+            <option value="$PROJECT_DIR$/common/base/cloud-lyric-engine" />
+            <option value="$PROJECT_DIR$/common/base/extensions-android" />
+            <option value="$PROJECT_DIR$/common/base/extensions-kt" />
+            <option value="$PROJECT_DIR$/common/codec" />
+            <option value="$PROJECT_DIR$/common/codec/amkit" />
+            <option value="$PROJECT_DIR$/common/codec/krckit" />
+            <option value="$PROJECT_DIR$/common/codec/lrckit" />
+            <option value="$PROJECT_DIR$/common/codec/qrckit" />
+            <option value="$PROJECT_DIR$/common/codec/yrckit" />
             <option value="$PROJECT_DIR$/platform" />
             <option value="$PROJECT_DIR$/platform/163-music" />
             <option value="$PROJECT_DIR$/platform/apple-music" />
