@@ -14,11 +14,12 @@ object MediaMetadataCache {
     private const val MAX_SIZE = 100
 
     private val metadataCache = object : LinkedHashMap<String, Metadata>(16, 0.75f, true) {
-        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Metadata>?): Boolean =
-            size > MAX_SIZE
+        override fun removeEldestEntry(
+            eldest: MutableMap.MutableEntry<String, Metadata>?,
+        ): Boolean = size > MAX_SIZE
     }
 
-    /** 缓存并返回新的元数据；MediaId 缺失时返回 null。 */
+    /** MediaId 缺失时返回 null。 */
     fun putAndGet(metadata: MediaMetadata): Metadata? {
         val mediaId = metadata.getString(MediaMetadata.METADATA_KEY_MEDIA_ID)
         if (mediaId.isNullOrBlank()) return null
