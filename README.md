@@ -34,6 +34,7 @@
 | 🧂 **Salt 音乐**     | `salt-player-music` | 基于魅族标准歌词接口适配         |
 | 🎵 **汽水音乐**        | `qishui-music`      | 支持动态歌词、翻译歌词          |
 | 🎵 **MusicFree**   | `music-free`        | 支持翻译                 |
+| 🎵 **飞牛音乐**       | `feiniu-music`      | 支持当前行纯文本歌词及播放状态同步 |
 
 > **网易云模块兼容性：** `163-music` 从 1.1.0-beta1 起仅提供单一 Modern API APK，要求 LSPosed Modern API 101 或更高版本；仅支持 Legacy API 的 LSPosed 1.9.2 无法加载该模块。其余提供者模块仍使用 Legacy API，不受此变更影响。
 
