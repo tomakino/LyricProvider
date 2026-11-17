@@ -88,9 +88,9 @@ jobs:
           esac
         env:
           RELEASE_STORE_FILE: ${{ github.workspace }}/release.jks
-          RELEASE_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
-          RELEASE_KEY_ALIAS: ${{ secrets.ALIAS }}
-          RELEASE_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          RELEASE_STORE_PASSWORD: ${{ env.BUILD_TYPE == 'release' && secrets.KEY_STORE_PASSWORD || '' }}
+          RELEASE_KEY_ALIAS: ${{ env.BUILD_TYPE == 'release' && secrets.ALIAS || '' }}
+          RELEASE_KEY_PASSWORD: ${{ env.BUILD_TYPE == 'release' && secrets.KEY_PASSWORD || '' }}
 
       - name: Collect APKs to flat directory
         if: ${{ success() }}
