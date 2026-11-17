@@ -9,7 +9,7 @@ on:
         options:
           - debug
           - release
-        default: debug
+        default: release
         required: true
 
 jobs:
@@ -17,14 +17,22 @@ jobs:
     name: Build and Release Apps
     runs-on: ubuntu-latest
 
+    timeout-minutes: 45
+    permissions:
+      contents: read
+
+    concurrency:
+      group: lyricprovider-${{ github.ref }}-${{ inputs.build-type || 'release' }}
+      cancel-in-progress: false
+
     env:
-      BUILD_TYPE: ${{ github.event.inputs.build-type || 'release' }}
+      BUILD_TYPE: ${{ inputs.build-type || 'release' }}
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v7.0.1
         with:
-          fetch-depth: 0
+          fetch-depth: 1
 
       - name: Set up JDK 21
         uses: actions/setup-java@v6.3.0
@@ -41,6 +49,7 @@ jobs:
           gradle-version: wrapper
           cache-read-only: ${{ github.ref != 'refs/heads/master' }}
           cache-disabled: false
+          cache-cleanup: on-success
 
       - name: Decode and Validate Keystore
         if: ${{ env.BUILD_TYPE == 'release' }}
@@ -84,6 +93,7 @@ jobs:
           RELEASE_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
 
       - name: Collect APKs to flat directory
+        if: ${{ success() }}
         run: |
           set -euo pipefail
           mkdir -p collected-apks
@@ -99,18 +109,26 @@ jobs:
           fi
 
           for apk in "${APK_FILES[@]}"; do
-            destination="collected-apks/$(basename "$apk")"
+            module="$(awk -F/ '{for(i=1;i<=NF;i++) if($i=="build"){print $(i-2) "/" $(i-1); exit}}' <<< "$apk")"
+            module="${module//\//_}"
+            destination="collected-apks/${module}-$(basename "$apk")"
             if [[ -e "$destination" ]]; then
-              echo "::error::Duplicate APK filename: $(basename "$apk")"
+              echo "::error::Duplicate APK destination: $destination"
               exit 1
             fi
             cp -- "$apk" "$destination"
           done
 
+          (
+            cd collected-apks
+            sha256sum *.apk > SHA256SUMS
+          )
+
           echo "Collected files:"
           ls -lh collected-apks/
 
       - name: Upload APKs to Artifacts
+        if: ${{ success() }}
         uses: actions/upload-artifact@v7.0.2
         with:
           name: ${{ env.BUILD_TYPE }}-apks
@@ -118,6 +136,7 @@ jobs:
           if-no-files-found: error
           archive: true
           compression-level: 0
+          retention-days: 30
 
       - name: Cleanup
         if: always()
