@@ -18,10 +18,11 @@ class AndroidLibraryConventionPlugin : Plugin<Project> {
         pluginManager.apply("org.jetbrains.kotlin.plugin.serialization")
 
         val projectRef = this
+        val compileSdkVersion = extraInt("compileSdkVersion", 37)
 
         extensions.configure<LibraryExtension> {
             compileSdk {
-                version = release(36)
+                version = release(compileSdkVersion)
             }
 
             defaultConfig {
