@@ -19,25 +19,22 @@
 
 ### 核心适配列表
 
-| 平台名称               | 标识符                 | 功能说明                        |
+| 平台名称               | 标识符              | 功能说明                        |
 |:-------------------|:--------------------|:----------------------------|
 | 🍎 **Apple Music** | `apple-music`       | 支持逐字、翻译、背景人声、对唱格式歌词         |
 | ☁️ **网易云音乐/荣耀版**   | `163-music`         | 支持逐字歌词、翻译歌词；Modern API 101+ |
 | 🐧 **QQ 音乐**       | `qq-music`          | 支持逐字歌词、翻译歌词                 |
 | 🐧 **QQ 音乐 HD**    | `qq-music-hd`       | 支持逐字歌词、翻译歌词                 |
-| 🔵 **波点音乐**        | `bodian`      | 支持逐字歌词，离线可用                 |
-| 🧊 **LX 音乐**       | `lx`          | 支持翻译歌词显示                    |
-| 🐶 **酷狗音乐/概念版**    | `kugou`       | **需在 App 内开启车载歌词模式**        |
-| 📻 **酷我音乐**        | `kuwo`        | **需在 App 内开启车载歌词模式**        |
-| 🎧 **Spotify**     | `spotify`     | 支持标准歌词、逐字歌词                 |
-| ⚡ **Poweramp**     | `poweramp`    | 支持网络匹配及本地内嵌歌词               |
+| 🔵 **波点音乐**        | `bodian`            | 支持逐字歌词，离线可用                 |
+| 🧊 **LX 音乐**       | `lx`                | 支持翻译歌词显示                    |
+| 🐶 **酷狗音乐/概念版**    | `kugou`             | **需在 App 内开启车载歌词模式**        |
+| 📻 **酷我音乐**        | `kuwo`              | **需在 App 内开启车载歌词模式**        |
+| 🎧 **Spotify**     | `spotify`           | 支持标准歌词、逐字歌词                 |
+| ⚡ **Poweramp**     | `poweramp`          | 支持网络匹配及本地内嵌歌词               |
 | 🧂 **Salt 音乐**     | `salt-player-music` | 基于魅族标准歌词接口适配                |
-| 🎵 **汽水音乐**        | `qishui`      | 支持动态歌词、翻译歌词                 |
+| 🎵 **汽水音乐**        | `qishui`            | 支持动态歌词、翻译歌词                 |
 | 🎵 **MusicFree**   | `music-free`        | 支持翻译                        |
-| 🎵 **飞牛音乐**       | `feiniu-music`      | 支持当前行纯文本歌词及播放状态同步 |
-> **网易云模块兼容性：** `163-music` 从 1.1.0-beta1 起仅提供单一 Modern API APK，要求 LSPosed Modern
-> API 101 或更高版本；仅支持 Legacy API 的 LSPosed 1.9.2 无法加载该模块。其余提供者模块仍使用 Legacy
-> API，不受此变更影响。
+| 🎵 **飞牛音乐**       | `feiniu`            | 支持当前行纯文本歌词及播放状态同步 |
 
 ### 通用/特殊模块
 
@@ -57,6 +54,7 @@
 - **Sollin Player**
 - [**QZ Music**](https://github.com/lqtmcstudio/QZMusic)
 - [**棉花音乐**](https://github.com/pure-music/PureMusic)
+- [**椒盐音乐**](https://moriafly.com/saltplayer/)
 
 #### 已适配了但没有你的播放器？请[提交 issue](https://github.com/tomakino/LyricProvider/issues)。
 
