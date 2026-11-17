@@ -95,7 +95,7 @@ class OkHttpHooker(
                     arg.toPairMap().forEach { (key, value) ->
                         val keyLowercase = key.lowercase(Locale.ENGLISH)
                         if (keyLowercase in SpotifyApi.keysRequired) {
-                            SpotifyApi.headers[keyLowercase] = value
+                            SpotifyApi.recordHeader(keyLowercase, value)
                         }
                     }
                 }
