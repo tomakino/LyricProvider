@@ -15,7 +15,8 @@ android {
 
 dependencies {
     implementation(project(":common:base:extensions-android"))
-    implementation(project(":common:codec:amkit"))
+    implementation(project(":common:codec:amkit-download"))
+    implementation(project(":common:codec:amkit-parser"))
     implementation(libs.okhttp)
     implementation(libs.kotlinx.coroutines.core)
 }

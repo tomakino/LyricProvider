@@ -9,10 +9,13 @@ package io.github.proify.lyricon.amprovider.xposed.lyrics
 import io.github.proify.lyricon.lyric.model.LyricWord
 import io.github.proify.lyricon.lyric.model.RichLyricLine
 import io.github.proify.lyricon.lyric.model.Song
-import io.github.tomakino.amkit.model.LyricsAgent
-import io.github.tomakino.amkit.model.LyricsDocument
-import io.github.tomakino.amkit.model.LyricsLine
-import io.github.tomakino.amkit.model.LyricsWord
+import io.github.tomakino.amkit.download.SystemLyricsLocale
+import io.github.tomakino.amkit.parser.DisplayOptions
+import io.github.tomakino.amkit.parser.displayLines
+import io.github.tomakino.amkit.parser.model.LyricsAgent
+import io.github.tomakino.amkit.parser.model.LyricsDocument
+import io.github.tomakino.amkit.parser.model.LyricsLine
+import io.github.tomakino.amkit.parser.model.LyricsWord
 
 /**
  * [LyricsDocument] → [Song]。
@@ -30,18 +33,13 @@ object LyricsMapper {
         durationMs: Long,
         document: LyricsDocument,
     ): Song {
-        val targetLanguage = AppleLocale.lyricsLanguage()
-        val sameLanguage = isSameLanguage(document.language, targetLanguage)
+        val targetLanguage = SystemLyricsLocale.languageTag()
         val rightAligned = rightAlignedIndices(document.lines, document.agents)
+        // amkit 负责本地化视图（替换原文 / 对照译文 / 逐字兜底），这里只做模型转换
+        val displays = document.displayLines(DisplayOptions(language = targetLanguage))
 
         val lines = document.lines.mapIndexed { index, line ->
-            val localized = line.translations.firstOrNull {
-                it.language?.startsWith(targetLanguage, ignoreCase = true) == true
-            }
-            val roma = line.transliterations.firstOrNull()?.text
-            val originalText = line.text
-            val localizedText = localized?.text
-            val asPrimary = sameLanguage && localizedText != null
+            val display = displays[index]
             val begin = line.start?.inWholeMilliseconds ?: 0L
             val end = line.end?.inWholeMilliseconds
                 ?: line.words.lastOrNull()?.end?.inWholeMilliseconds
@@ -51,21 +49,16 @@ object LyricsMapper {
                 this.begin = begin
                 this.end = end
                 duration = (end - begin).coerceAtLeast(0L)
-                text = if (asPrimary) localizedText else originalText
-                words = if (asPrimary) {
-                    alignWords(line.words, originalText, localizedText).map { it.toLyricWord() }
-                } else {
-                    line.words.map { it.toLyricWord() }
-                }.toMutableList()
-                secondary = line.backgroundText.ifBlank { null }
-                secondaryWords = line.background.map { it.toLyricWord() }.toMutableList()
-                translation = if (!sameLanguage) localizedText?.takeIf { it.isNotBlank() } else null
-                translationWords = if (!sameLanguage) {
-                    localized?.words?.map { it.toLyricWord() }
-                } else {
-                    null
-                }
-                this.roma = roma
+                text = display.text
+                words = display.words
+                    .filter { it.start != null }
+                    .map { it.toLyricWord() }
+                    .toMutableList()
+                secondary = display.background
+                secondaryWords = display.backgroundWords.map { it.toLyricWord() }.toMutableList()
+                translation = display.translation
+                translationWords = display.translationWords?.map { it.toLyricWord() }
+                roma = line.transliterations.firstOrNull()?.text
                 // 宿主 `isAlignedRight = true` 渲染在右，与 Apple 的 6（右）同向
                 isAlignedRight = index in rightAligned
             }
@@ -80,50 +73,6 @@ object LyricsMapper {
         )
     }
 
-    /** 只比较主语言子标签：`zh-Hant` 与 `zh-Hans` 属于同一语言。 */
-    private fun isSameLanguage(source: String?, target: String): Boolean {
-        val sourceLanguage = source?.substringBefore('-')?.lowercase() ?: return false
-        return sourceLanguage == target.substringBefore('-').lowercase()
-    }
-
-    /**
-     * 把逐字文本替换为译文中的对应字符。
-     *
-     * 比较与切分都忽略空白：中文原文通常不含空格，译文可能带空格。
-     * 逐字符映射可以处理整行只有一个 span 的情况。
-     */
-    private fun alignWords(
-        words: List<LyricsWord>,
-        original: String,
-        localized: String?,
-    ): List<LyricsWord> {
-        if (localized == null) return words
-
-        val originalCompact = original.filterNot { it.isWhitespace() }
-        val localizedCompact = localized.filterNot { it.isWhitespace() }
-        if (originalCompact.length != localizedCompact.length) return words
-
-        var offset = 0
-        return words.map { word ->
-            if (word.text.isBlank()) return@map word
-
-            val builder = StringBuilder(word.text.length)
-            var consumed = true
-            for (ch in word.text) {
-                if (ch.isWhitespace()) {
-                    builder.append(ch)
-                } else {
-                    if (offset >= localizedCompact.length) {
-                        consumed = false
-                        break
-                    }
-                    builder.append(localizedCompact[offset])
-                    offset++
-                }
-            }
-            if (consumed) word.copy(text = builder.toString()) else word
-        }
-    }
 
     /**
      * 复刻宿主 `PlayerLyricsViewModel` 的逐行对齐推演（`x.s0`）。
