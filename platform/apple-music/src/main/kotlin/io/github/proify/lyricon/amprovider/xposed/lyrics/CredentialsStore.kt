@@ -79,7 +79,7 @@ object CredentialsStore {
             DebugLog.error("Credentials", "developerToken 读取失败")
             return null
         }
-        DebugLog.log("Credentials", "token=$token")
+        // DebugLog.log("Credentials", "token=${token.take(16)}...${token.takeLast(4)}")
         val cookies = readCookies(ctx)
         if (cookies.isEmpty()) {
             DebugLog.error("Credentials", "Cookie 为空")
@@ -98,7 +98,7 @@ object CredentialsStore {
             cached = it
             DebugLog.log(
                 "Credentials",
-                "ready token=${token.length}字节 cookie=${cookies.size}项 dsid=$dsid " +
+                "ready token=${token.length}字节 cookie=${cookies.size}项 dsid=*** " +
                         "storefront=${storefront()}"
             )
         }
