@@ -13,7 +13,7 @@ android {
     namespace = "io.github.tomakino.amkit.download"
 
     compileSdk {
-        version = release(36)
+        version = release(rootProject.extra.get("compileSdkVersion") as Int)
     }
 
     defaultConfig {
@@ -29,7 +29,6 @@ android {
 
 dependencies {
     implementation(project(":common:codec:amkit-parser"))
-    implementation(libs.okhttp)
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.serialization.json)
 
