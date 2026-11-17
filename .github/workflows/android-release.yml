@@ -22,12 +22,12 @@ jobs:
 
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0
 
       - name: Set up JDK 21
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v6.3.0
         with:
           distribution: 'temurin'
           java-version: '21'
@@ -36,24 +36,47 @@ jobs:
         run: chmod +x ./gradlew
 
       - name: Setup Gradle with Caching
-        uses: gradle/actions/setup-gradle@v3
+        uses: gradle/actions/setup-gradle@v6.4.1
         with:
           gradle-version: wrapper
           cache-read-only: ${{ github.ref != 'refs/heads/master' }}
           cache-disabled: false
 
-      - name: Decode Keystore
-        if: ${{ github.event.inputs.build-type == 'release' || env.BUILD_TYPE == 'release' }}
+      - name: Decode and Validate Keystore
+        if: ${{ env.BUILD_TYPE == 'release' }}
+        env:
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+          KEY_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
-          echo "${{ secrets.SIGNING_KEY }}" | base64 -d > release.jks
+          set -euo pipefail
+          : "${SIGNING_KEY:?Missing GitHub Secret SIGNING_KEY}"
+          : "${KEY_STORE_PASSWORD:?Missing GitHub Secret KEY_STORE_PASSWORD}"
+          : "${KEY_ALIAS:?Missing GitHub Secret ALIAS}"
+          : "${KEY_PASSWORD:?Missing GitHub Secret KEY_PASSWORD}"
+
+          printf '%s' "$SIGNING_KEY" | base64 --decode > "$GITHUB_WORKSPACE/release.jks"
+          test -s "$GITHUB_WORKSPACE/release.jks"
+          keytool -list -keystore "$GITHUB_WORKSPACE/release.jks" \
+            -storepass "$KEY_STORE_PASSWORD" -alias "$KEY_ALIAS" >/dev/null
 
       - name: Build APKs with Caching
         run: |
-          if [ "$BUILD_TYPE" = "release" ]; then
-            ./gradlew assembleRelease --build-cache
-          else
-            ./gradlew assembleDebug --build-cache
-          fi
+          set -euo pipefail
+          case "$BUILD_TYPE" in
+            release)
+              test -s "$RELEASE_STORE_FILE"
+              ./gradlew assembleRelease --build-cache --continue --stacktrace
+              ;;
+            debug)
+              ./gradlew assembleDebug --build-cache --continue --stacktrace
+              ;;
+            *)
+              echo "::error::Unsupported BUILD_TYPE: $BUILD_TYPE"
+              exit 1
+              ;;
+          esac
         env:
           RELEASE_STORE_FILE: ${{ github.workspace }}/release.jks
           RELEASE_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
@@ -62,21 +85,39 @@ jobs:
 
       - name: Collect APKs to flat directory
         run: |
+          set -euo pipefail
           mkdir -p collected-apks
 
-          # 复制所有 APK 文件
-          find . -name "*.apk" -path "*/build/outputs/apk/${{ env.BUILD_TYPE }}/*" -exec cp {} collected-apks/ \;
+          mapfile -d '' APK_FILES < <(
+            find . -type f -name "*.apk" \
+              -path "*/build/outputs/apk/${BUILD_TYPE}/*" -print0
+          )
+
+          if (( ${#APK_FILES[@]} == 0 )); then
+            echo "::error::No ${BUILD_TYPE} APKs were produced."
+            exit 1
+          fi
+
+          for apk in "${APK_FILES[@]}"; do
+            destination="collected-apks/$(basename "$apk")"
+            if [[ -e "$destination" ]]; then
+              echo "::error::Duplicate APK filename: $(basename "$apk")"
+              exit 1
+            fi
+            cp -- "$apk" "$destination"
+          done
 
           echo "Collected files:"
           ls -lh collected-apks/
 
       - name: Upload APKs to Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: ${{ env.BUILD_TYPE }}-apks
           path: collected-apks/
           if-no-files-found: error
-          archive: false
+          archive: true
+          compression-level: 0
 
       - name: Cleanup
         if: always()
