@@ -29,7 +29,8 @@
             <option value="$PROJECT_DIR$/common/base/extensions-android" />
             <option value="$PROJECT_DIR$/common/base/extensions-kt" />
             <option value="$PROJECT_DIR$/common/codec" />
-            <option value="$PROJECT_DIR$/common/codec/amkit" />
+            <option value="$PROJECT_DIR$/common/codec/amkit-download" />
+            <option value="$PROJECT_DIR$/common/codec/amkit-parser" />
             <option value="$PROJECT_DIR$/common/codec/krckit" />
             <option value="$PROJECT_DIR$/common/codec/lrckit" />
             <option value="$PROJECT_DIR$/common/codec/qrckit" />
@@ -38,6 +39,7 @@
             <option value="$PROJECT_DIR$/platform/163-music" />
             <option value="$PROJECT_DIR$/platform/apple-music" />
             <option value="$PROJECT_DIR$/platform/bodian" />
+            <option value="$PROJECT_DIR$/platform/feiniu" />
             <option value="$PROJECT_DIR$/platform/gramophone" />
             <option value="$PROJECT_DIR$/platform/kugou" />
             <option value="$PROJECT_DIR$/platform/kuwo" />

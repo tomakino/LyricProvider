@@ -10,6 +10,9 @@ import android.content.Context
 import android.media.MediaMetadata
 import android.media.session.PlaybackState
 import com.highcapable.kavaref.KavaRef.Companion.resolve
+import com.highcapable.kavaref.extension.classOf
+import com.highcapable.yukihookapi.extension.kavaref.hook
+import com.highcapable.yukihookapi.extension.kavaref.toClass
 import com.highcapable.yukihookapi.hook.entity.YukiBaseHooker
 import com.highcapable.yukihookapi.hook.log.YLog
 import io.github.proify.lyricon.provider.LyriconFactory
@@ -31,7 +34,7 @@ open class FeiniuMusic(val tag: String = "FeiniuMusicProvider") : YukiBaseHooker
     override fun onHook() {
         YLog.debug(tag = tag, msg = "Feiniu music media session hook loaded")
 
-        onAppLifecycle {
+        registerAppLifecycle(true) {
             onCreate {
                 initProvider(this)
             }
@@ -81,7 +84,7 @@ open class FeiniuMusic(val tag: String = "FeiniuMusicProvider") : YukiBaseHooker
         "android.media.session.MediaSession".toClass().resolve().apply {
             firstMethod {
                 name = "setPlaybackState"
-                parameters(PlaybackState::class.java)
+                parameters(classOf<PlaybackState>())
             }.hook {
                 after {
                     val state = args[0] as? PlaybackState ?: return@after
@@ -91,7 +94,7 @@ open class FeiniuMusic(val tag: String = "FeiniuMusicProvider") : YukiBaseHooker
             }
             firstMethod {
                 name = "setMetadata"
-                parameters(MediaMetadata::class.java)
+                parameters(classOf<MediaMetadata>())
             }.hook {
                 after {
                     publishLine(args[0] as? MediaMetadata)
