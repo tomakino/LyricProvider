@@ -24,7 +24,15 @@ object LyricDownloader {
 
         scope.launch {
             try {
-                val song = fromNetwork(id)
+                val diskCache = fromDisk(id)
+
+                val song = if (diskCache != null) {
+                    diskCache
+                } else {
+                    val song = fromNetwork(id)
+                    DiskCacheStore.put(id, song)
+                    song
+                }
 
                 callback.onLyricDownloadFinished(id, song)
             } catch (e: Exception) {
@@ -34,6 +42,8 @@ object LyricDownloader {
             }
         }
     }
+
+    private fun fromDisk(id: Long): Song? = DiskCacheStore.load(id)
 
     private fun fromNetwork(id: Long): Song {
         val response = YrcDownloader.fetchLyric(id)

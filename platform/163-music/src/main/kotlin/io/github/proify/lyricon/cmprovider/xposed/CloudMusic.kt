@@ -22,7 +22,7 @@ import io.github.proify.lyricon.provider.LyriconFactory
 import io.github.proify.lyricon.provider.LyriconProvider
 import io.github.proify.lyricon.provider.ProviderLogo
 
-internal class CloudMusic : YukiBaseHooker() {
+class CloudMusic : YukiBaseHooker() {
 
     private var provider: LyriconProvider? = null
     private var monitor: PreferencesMonitor? = null
@@ -32,6 +32,7 @@ internal class CloudMusic : YukiBaseHooker() {
 
     override fun onHook() {
         YLog.info("processName: $processName")
+        DiskCacheStore.init(appInfo.dataDir)
 
         registerAppLifecycle {
             onCreate {
