@@ -4,151 +4,89 @@
  * http://www.apache.org/licenses/LICENSE-2.0
  */
 
+@file:OptIn(ExperimentalSerializationApi::class)
+
 package io.github.proify.lyricon.spotifyprovider.xposed.util
 
 import io.github.proify.lyricon.lyric.model.LyricWord
 import io.github.proify.lyricon.lyric.model.RichLyricLine
 import io.github.proify.lyricon.lyric.model.Song
-import io.github.proify.lyricon.spotifyprovider.xposed.api.SpotifyApi.jsonParser
-import io.github.proify.lyricon.spotifyprovider.xposed.api.proto.ProtoLyricLine
-import io.github.proify.lyricon.spotifyprovider.xposed.api.proto.ProtoLyricResponse
-import io.github.proify.lyricon.spotifyprovider.xposed.api.proto.ProtoLyricsData
-import io.github.proify.lyricon.spotifyprovider.xposed.api.proto.ProtoSyllable
-import io.github.proify.lyricon.spotifyprovider.xposed.api.response.LyricResponse
-import io.github.proify.lyricon.spotifyprovider.xposed.api.response.LyricsData
-import io.github.proify.lyricon.spotifyprovider.xposed.cache.MetadataCache
-import io.github.proify.lyricon.spotifyprovider.xposed.parser.SpotifyProtoParser
+import io.github.proify.lyricon.spotifyprovider.xposed.TrackMetadata
+import io.github.proify.lyricon.spotifyprovider.xposed.api.proto.ColorLyricsResponse
+import io.github.proify.lyricon.spotifyprovider.xposed.api.proto.LyricsLine
+import io.github.proify.lyricon.spotifyprovider.xposed.api.proto.LyricsResponse
+import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.decodeFromByteArray
+import kotlinx.serialization.protobuf.ProtoBuf
 
 /**
- * 将 Spotify 原始响应字节转换为歌曲。
+ * 将 Spotify color-lyrics protobuf 响应转换为歌曲。
  *
- * 响应可能是 protobuf（逐字数据所在）或 JSON（服务端降级），按首字节自动分流：
- * - 首字节 `{`：走原 JSON 序列化路径（行级歌词）；
- * - 其余：走 protobuf 解析路径（行级 + 逐字歌词）。
- *
+ * @param metadata 当前曲目元数据，提供 id、标题、艺术家与时长
  * @return 转换后的歌曲；响应为空或解析失败返回 null
  */
-fun ByteArray.toSongOrNull(id: String): Song? {
+fun ByteArray.toSongOrNull(metadata: TrackMetadata): Song? {
     if (isEmpty()) return null
-    return if (isJsonBody()) {
-        runCatching { jsonParser.decodeFromString<LyricResponse>(toString(Charsets.UTF_8)) }
-            .getOrNull()
-            ?.toSong(id)
-    } else {
-        SpotifyProtoParser.parse(this)?.toSong(id)
-    }
-}
-
-private fun ByteArray.isJsonBody(): Boolean = first() == '{'.code.toByte()
-
-/**
- * JSON 响应转歌曲（原有行级实现）。
- */
-fun LyricResponse.toSong(id: String): Song {
-    val metadata = MetadataCache.get(id)
-    val song = Song()
-    song.id = id
-    song.name = metadata?.title
-    song.artist = metadata?.artist
-    song.duration = (metadata?.duration ?: 0).run {
-        if (this <= 0L) Long.MAX_VALUE else this
-    }
-    song.lyrics = lyrics.toLyrics()
-    return song
-}
-
-fun LyricsData.toLyrics(): List<RichLyricLine> {
-    val lyrics = mutableListOf<RichLyricLine>()
-    lines.mapIndexed { index, line ->
-        if (line.endTimeMs == 0L) {
-            val nextLine = lines.getOrNull(index + 1)
-            line.copy(endTimeMs = nextLine?.startTimeMs ?: (line.startTimeMs + 5000))
-        } else line
-    }.forEach { line ->
-        if (line.words.isNullOrBlank()) {
-            return@forEach
-        }
-        lyrics += RichLyricLine(
-            begin = line.startTimeMs,
-            end = line.endTimeMs,
-            duration = line.endTimeMs - line.startTimeMs,
-            text = line.words,
-            translation = line.transliteratedWords
-        )
-    }
-
-    return lyrics
+    return runCatching { ProtoBuf.decodeFromByteArray<ColorLyricsResponse>(this) }
+        .getOrNull()
+        ?.lyrics
+        ?.toSong(metadata)
 }
 
 /**
- * protobuf 响应转歌曲。
+ * protobuf 歌词主体转歌曲。
  */
-fun ProtoLyricResponse.toSong(id: String): Song {
-    val metadata = MetadataCache.get(id)
-    return Song(
-        id = id,
-        name = metadata?.title,
-        artist = metadata?.artist,
-        duration = (metadata?.duration ?: 0L).let { if (it <= 0L) Long.MAX_VALUE else it },
-        lyrics = lyrics?.toLyrics()
-    )
-}
+fun LyricsResponse.toSong(metadata: TrackMetadata): Song = Song(
+    id = metadata.id,
+    name = metadata.title,
+    artist = metadata.artist,
+    duration = metadata.duration,
+    lyrics = toLyrics()
+)
 
 /**
  * protobuf 歌词主体转富歌词行列表。
- */
-fun ProtoLyricsData.toLyrics(): List<RichLyricLine> = lines.toRichLyricLines()
-
-/**
- * protobuf 歌词行转富歌词行。
  *
- * 行级 [endTimeMs] 在 protobuf 中通常缺省，按下一行起始时间兜底，最后一行 +5000ms；
+ * 行级结束时间在协议中缺省，按下一行起始时间兜底，最后一行 +5000ms；
  * 逐字数据有效的行携带 [LyricWord] 列表，否则回退为纯行级歌词。
  */
-fun List<ProtoLyricLine>.toRichLyricLines(): List<RichLyricLine> =
-    mapIndexedNotNull { index, line ->
-        val text = line.words ?: return@mapIndexedNotNull null
+fun LyricsResponse.toLyrics(): List<RichLyricLine> =
+    lines.mapIndexedNotNull { index, line ->
+        val text = line.words
         if (text.isBlank()) return@mapIndexedNotNull null
-        val endTimeMs = getOrNull(index + 1)?.startTimeMs ?: (line.startTimeMs + 5000L)
+        val endTimeMs = lines.getOrNull(index + 1)?.startTimeMs ?: (line.startTimeMs + 5000L)
         RichLyricLine(
             begin = line.startTimeMs,
             end = endTimeMs,
-            duration = endTimeMs - line.startTimeMs,
+            duration = (endTimeMs - line.startTimeMs).coerceAtLeast(0L),
             text = text,
-            words = line.toLyricWords()
+            words = line.toLyricWords(endTimeMs)
         )
     }
 
 /**
- * 按 [ProtoSyllable.count] 累计游标切片整行文本，生成逐字 [LyricWord]。
+ * 按 [LyricsLine.syllables] 的字符数累计游标切片整行文本，生成逐字 [LyricWord]。
  *
  * 任一音节计数异常或累计长度与整行文本不一致时返回 null，
  * 由调用方回退为纯行级歌词，避免切片错位。
  */
-private fun ProtoLyricLine.toLyricWords(): List<LyricWord>? {
-    val text = words ?: return null
+private fun LyricsLine.toLyricWords(lineEnd: Long): List<LyricWord>? {
+    val text = words
     if (syllables.isEmpty()) return null
 
-    val sliced = syllables.fold(SliceState()) { state, syllable ->
-        if (syllable.count < 0 || state.offset + syllable.count > text.length) return null
-        val endOffset = state.offset + syllable.count
-        state.copy(
-            offset = endOffset,
-            words = state.words + LyricWord(
-                begin = syllable.startTimeMs,
-                end = syllable.endTimeMs,
-                duration = (syllable.endTimeMs - syllable.startTimeMs).coerceAtLeast(0L),
-                text = text.substring(state.offset, endOffset)
-            )
+    val result = ArrayList<LyricWord>(syllables.size)
+    var offset = 0
+    syllables.forEachIndexed { index, syllable ->
+        if (syllable.numChars < 0 || offset + syllable.numChars > text.length) return null
+        val endOffset = offset + syllable.numChars
+        val end = syllables.getOrNull(index + 1)?.startTimeMs ?: lineEnd
+        result += LyricWord(
+            begin = syllable.startTimeMs,
+            end = end,
+            duration = (end - syllable.startTimeMs).coerceAtLeast(0L),
+            text = text.substring(offset, endOffset)
         )
+        offset = endOffset
     }
-    return sliced.words.takeIf { sliced.offset == text.length }
+    return result.takeIf { offset == text.length }
 }
-
-/**
- * 切片过程中的不可变游标状态。
- */
-private data class SliceState(
-    val offset: Int = 0,
-    val words: List<LyricWord> = emptyList()
-)

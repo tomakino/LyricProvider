@@ -20,6 +20,7 @@ android {
 }
 
 dependencies {
+    implementation(project(":common:base:dexkit"))
     implementation(project(":common:base:extensions-android"))
     implementation(project(":common:codec:lrckit"))
     implementation(project(":common:codec:krckit"))

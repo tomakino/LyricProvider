@@ -6,7 +6,7 @@
 
 plugins {
     id("lyricon.android.application")
-    id("lyricon.libxposed")
+    id("lyricon.yukihook")
 }
 
 android {
@@ -15,12 +15,13 @@ android {
     defaultConfig {
         applicationId = "io.github.proify.lyricon.cmprovider"
         minSdk = 28
-        versionCode = 8
-        versionName = "1.1.0-beta1"
+        versionCode = 10
+        versionName = "1.20"
     }
 }
 
 dependencies {
+    implementation(project(":common:base:dexkit"))
     implementation(project(":common:base:extensions-kt"))
     implementation(project(":common:codec:lrckit"))
     implementation(project(":common:codec:yrckit"))

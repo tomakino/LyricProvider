@@ -7,74 +7,62 @@
 package io.github.proify.lyricon.spotifyprovider.xposed.api
 
 import com.highcapable.yukihookapi.hook.log.YLog
-import kotlinx.serialization.json.Json
+import io.github.proify.lyricon.spotifyprovider.xposed.api.SpotifyException.ApiException
+import okhttp3.ConnectionPool
+import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.Response
+import java.io.IOException
+import java.net.ConnectException
+import java.net.SocketException
+import java.net.SocketTimeoutException
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.TimeUnit
 
-/**
- * Spotify API 封装对象，负责处理歌词获取等网络请求
- */
+/** Spotify color-lyrics 接口。 */
 object SpotifyApi {
 
-    const val TAG = "SpotifyApi"
+    private const val TAG = "SpotifyApi"
+    private const val BASE_URL = "https://gae2-spclient.spotify.com/color-lyrics/v2/track/"
 
-    val keysRequired = arrayOf(
+    private const val MAX_RETRIES = 3
+    private const val INITIAL_RETRY_DELAY_MS = 500L
+
+    private val client: OkHttpClient by lazy {
+        OkHttpClient.Builder()
+            .connectTimeout(10, TimeUnit.SECONDS)
+            .readTimeout(15, TimeUnit.SECONDS)
+            .writeTimeout(15, TimeUnit.SECONDS)
+            .connectionPool(
+                ConnectionPool(
+                    maxIdleConnections = 5,
+                    keepAliveDuration = 5,
+                    timeUnit = TimeUnit.MINUTES
+                )
+            )
+            .retryOnConnectionFailure(true)
+            .build()
+    }
+
+    /** 从宿主请求中捕获的请求头。 */
+    val capturedHeaders = ConcurrentHashMap<String, String>()
+
+    /** 发起歌词请求所需的请求头名称。 */
+    val REQUIRED_HEADERS: Set<String> = setOf(
         "authorization",
         "client-token",
         "user-agent",
         "x-client-id",
     )
 
-    private const val BASE_URL = "https://gae2-spclient.spotify.com/color-lyrics/v2/track/"
-
-    /** 请求头锁：捕获 Hook 与网络线程可能并发读写 */
-    private val headersLock = Any()
-
-    private val headers = mutableMapOf<String, String>()
-
-    val jsonParser = Json {
-        ignoreUnknownKeys = true
-        coerceInputValues = true
-    }
-
     /**
-     * 根据歌曲 ID 获取原始歌词字节
+     * 拉取指定曲目的原始歌词字节。
      *
-     * @param id 歌曲唯一标识
-     * @return 歌词原始字节（protobuf；服务端降级时可能是 JSON）
-     * @throws Exception 网络错误或解析异常
+     * @param id 曲目标识
+     * @throws SpotifyException 请求失败
      */
-    @Throws(Exception::class)
+    @Throws(SpotifyException::class)
     fun fetchRawLyric(id: String): ByteArray {
-        YLog.debug(tag = TAG, msg = "获取歌词: $id")
-        return performNetworkRequest(id)
-    }
-
-    /**
-     * 记录一条从宿主请求中捕获的请求头（线程安全）。
-     *
-     * @return true 表示值有更新
-     */
-    fun recordHeader(key: String, value: String): Boolean = synchronized(headersLock) {
-        if (headers[key] == value) {
-            false
-        } else {
-            headers[key] = value
-            true
-        }
-    }
-
-    /**
-     * 返回已捕获请求头的快照（线程安全）。
-     */
-    fun snapshotHeaders(): Map<String, String> = synchronized(headersLock) {
-        headers.toMap()
-    }
-
-    /**
-     * 执行实际的网络请求逻辑
-     */
-    @Throws(Exception::class)
-    private fun performNetworkRequest(id: String): ByteArray {
         val url = "$BASE_URL$id?vocalRemoval=true&clientLanguage=zh_CN&preview=false"
 
         val requestBuilder = Request.Builder()
@@ -84,16 +72,64 @@ object SpotifyApi {
             .addHeader("content-type", "application/protobuf")
             .addHeader("app-platform", "Android")
 
-        // 注入外部配置的 Header（快照拷贝，避免并发修改异常）
-        snapshotHeaders().forEach { (key, value) ->
+        capturedHeaders.toMap().forEach { (key, value) ->
             requestBuilder.addHeader(key, value)
         }
 
-        val request = requestBuilder.build()
+        return execute(requestBuilder.build()).body.bytes()
+    }
 
-        // 使用优化的客户端执行请求
-        val response = SpotifyApiClient.executeWithRetry(request)
+    /**
+     * 执行请求，可重试异常按指数退避重试。
+     *
+     * @param maxRetries 最大尝试次数
+     */
+    private fun execute(request: Request, maxRetries: Int = MAX_RETRIES): Response {
+        var lastException: Exception? = null
+        var retryDelay = INITIAL_RETRY_DELAY_MS
 
-        return response.body.bytes()
+        for (attempt in 1..maxRetries) {
+            try {
+                return executeOnce(request)
+            } catch (e: Exception) {
+                lastException = e
+
+                if (attempt < maxRetries && isRetryable(e)) {
+                    YLog.warn(
+                        tag = TAG,
+                        msg = "请求失败，${retryDelay}ms 后重试 ($attempt/$maxRetries): ${e.message}"
+                    )
+                    Thread.sleep(retryDelay)
+                    retryDelay *= 2
+                } else {
+                    break
+                }
+            }
+        }
+
+        throw lastException ?: IOException("未知错误")
+    }
+
+    private fun executeOnce(request: Request): Response {
+        val response = client.newCall(request).execute()
+        if (!response.isSuccessful) {
+            val code = response.code
+            val message = response.message
+            response.close()
+            when (code) {
+                403, 404 -> throw ApiException.NoLyricFoundException("未知")
+                in 500..599 -> throw ApiException.ResponseException(code, "服务器错误: $message")
+                else -> throw ApiException.ResponseException(code, "请求失败: $message")
+            }
+        }
+        return response
+    }
+
+    private fun isRetryable(e: Exception): Boolean = when (e) {
+        is SocketTimeoutException -> true
+        is ConnectException -> true
+        is SocketException -> true
+        is IOException -> true
+        else -> false
     }
 }

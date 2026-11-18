@@ -6,11 +6,6 @@
 
 # 保留 Xposed 入口
 -keep class io.github.proify.lyricon.kgprovider.xposed.HookEntry
--keep class io.github.proify.lyricon.kgprovider.xposed.kugou.KuGouBase
--keep class io.github.proify.lyricon.kgprovider.xposed.kugou.KuGou
--keep class io.github.proify.lyricon.kgprovider.xposed.kugou.KuGouLite
--keep class io.github.proify.lyricon.kgprovider.xposed.kugou.LyricsCache
--keep class io.github.proify.lyricon.kgprovider.xposed.kugou.KuGouVersionConfig$*
 
 # 保留 Kotlin 元数据
 -keep class kotlin.Metadata { *; }

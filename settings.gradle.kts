@@ -10,6 +10,9 @@ pluginManagement {
     includeBuild("build-logic")
     repositories {
         mavenLocal()
+        maven("https://maven.aliyun.com/repository/public")
+        maven("https://maven.aliyun.com/repository/google")
+        maven("https://maven.aliyun.com/repository/gradle-plugin")
         mavenCentral()
         maven { url = uri("https://jitpack.io") }
         google()
@@ -25,6 +28,9 @@ dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
         mavenLocal()
+        maven("https://maven.aliyun.com/repository/public")
+        maven("https://maven.aliyun.com/repository/google")
+        maven("https://maven.aliyun.com/repository/gradle-plugin")
         mavenCentral()
         maven { url = uri("https://jitpack.io") }
         google()

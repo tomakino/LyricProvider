@@ -14,7 +14,7 @@ import com.highcapable.yukihookapi.extension.kavaref.hook
 import com.highcapable.yukihookapi.extension.kavaref.toClass
 import com.highcapable.yukihookapi.hook.param.PackageParam
 import io.github.proify.lyricon.amprovider.xposed.cache.MediaMetadataCache
-import io.github.proify.lyricon.amprovider.xposed.core.SessionState
+import io.github.proify.lyricon.amprovider.xposed.SessionState
 import io.github.proify.lyricon.amprovider.xposed.playback.PlaybackState
 
 /** 宿主播放事件回调。 */

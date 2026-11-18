@@ -13,15 +13,12 @@ import com.highcapable.yukihookapi.hook.log.YLog
 import io.github.proify.extensions.android.ScreenStateMonitor
 import io.github.proify.lyricon.amprovider.xposed.cache.LyricsCache
 import io.github.proify.lyricon.amprovider.xposed.cache.MediaMetadataCache
-import io.github.proify.lyricon.amprovider.xposed.core.ProgressSync
-import io.github.proify.lyricon.amprovider.xposed.core.SessionState
 import io.github.proify.lyricon.amprovider.xposed.hook.PlaybackSink
 import io.github.proify.lyricon.amprovider.xposed.hook.installPlaybackHooks
 import io.github.proify.lyricon.amprovider.xposed.hook.installPreferenceHooks
 import io.github.proify.lyricon.amprovider.xposed.lyrics.AmkitLyricsSource
 import io.github.proify.lyricon.amprovider.xposed.lyrics.CredentialsStore
 import io.github.proify.lyricon.amprovider.xposed.playback.PlaybackManager
-import io.github.proify.lyricon.amprovider.xposed.prefs.PreferencesMonitor
 import io.github.proify.lyricon.amprovider.xposed.util.DebugLog
 import io.github.proify.lyricon.amprovider.xposed.util.callMethodOrNull
 import io.github.proify.lyricon.provider.LyriconFactory

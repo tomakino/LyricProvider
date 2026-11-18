@@ -8,11 +8,11 @@
 
 package io.github.proify.lyricon.spotifyprovider.xposed
 
-import io.github.proify.lyricon.spotifyprovider.xposed.api.proto.ProtoLyricLine
-import io.github.proify.lyricon.spotifyprovider.xposed.api.proto.ProtoLyricsData
-import io.github.proify.lyricon.spotifyprovider.xposed.api.proto.ProtoSyllable
+import io.github.proify.lyricon.spotifyprovider.xposed.TrackMetadata
+import io.github.proify.lyricon.spotifyprovider.xposed.api.proto.LyricsLine
+import io.github.proify.lyricon.spotifyprovider.xposed.api.proto.LyricsResponse
+import io.github.proify.lyricon.spotifyprovider.xposed.api.proto.Syllable
 import io.github.proify.lyricon.spotifyprovider.xposed.util.toLyrics
-import io.github.proify.lyricon.spotifyprovider.xposed.util.toRichLyricLines
 import io.github.proify.lyricon.spotifyprovider.xposed.util.toSongOrNull
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -23,23 +23,25 @@ class SpotifyConverterTest {
 
     @Test
     fun 逐字行按count切片并生成LyricWord() {
-        val lines = listOf(
-            ProtoLyricLine(
-                startTimeMs = 52604,
-                words = "On a dark desert highway,",
-                syllables = listOf(
-                    ProtoSyllable(52604, 3, 52694),
-                    ProtoSyllable(52831, 2, 52876),
-                    ProtoSyllable(53012, 5, 53239),
-                    ProtoSyllable(53330, 7, 53784),
-                    ProtoSyllable(53874, 4, 54056),
-                    ProtoSyllable(54147, 4, 54328)
-                )
-            ),
-            ProtoLyricLine(startTimeMs = 55781, words = "Cool wind in my hair,")
+        val response = LyricsResponse(
+            lines = listOf(
+                LyricsLine(
+                    startTimeMs = 52604,
+                    words = "On a dark desert highway,",
+                    syllables = listOf(
+                        Syllable(52604, 3),
+                        Syllable(52831, 2),
+                        Syllable(53012, 5),
+                        Syllable(53330, 7),
+                        Syllable(53874, 4),
+                        Syllable(54147, 4)
+                    )
+                ),
+                LyricsLine(startTimeMs = 55781, words = "Cool wind in my hair,")
+            )
         )
 
-        val richLines = lines.toRichLyricLines()
+        val richLines = response.toLyrics()
 
         assertEquals(2, richLines.size)
         val first = richLines[0]
@@ -55,8 +57,9 @@ class SpotifyConverterTest {
             listOf(52604L, 52831L, 53012L, 53330L, 53874L, 54147L),
             first.words!!.map { it.begin }
         )
+        // 逐字结束时间按下一音节起始推断，末段用行结束时间
         assertEquals(
-            listOf(52694L, 52876L, 53239L, 53784L, 54056L, 54328L),
+            listOf(52831L, 53012L, 53330L, 53874L, 54147L, 55781L),
             first.words!!.map { it.end }
         )
 
@@ -69,18 +72,20 @@ class SpotifyConverterTest {
 
     @Test
     fun 累计长度不一致时整行回退纯文本() {
-        val lines = listOf(
-            ProtoLyricLine(
-                startTimeMs = 0,
-                words = "On a dark desert highway,",
-                syllables = listOf(
-                    ProtoSyllable(0, 3, 100),
-                    ProtoSyllable(100, 999, 200)
+        val response = LyricsResponse(
+            lines = listOf(
+                LyricsLine(
+                    startTimeMs = 0,
+                    words = "On a dark desert highway,",
+                    syllables = listOf(
+                        Syllable(0, 3),
+                        Syllable(100, 999)
+                    )
                 )
             )
         )
 
-        val richLines = lines.toRichLyricLines()
+        val richLines = response.toLyrics()
         assertEquals(1, richLines.size)
         assertNull(richLines[0].words)
         assertEquals("On a dark desert highway,", richLines[0].text)
@@ -88,44 +93,27 @@ class SpotifyConverterTest {
 
     @Test
     fun 空白行被过滤() {
-        val lines = listOf(
-            ProtoLyricLine(startTimeMs = 1000, words = "  "),
-            ProtoLyricLine(startTimeMs = 2000, words = "hello")
+        val response = LyricsResponse(
+            lines = listOf(
+                LyricsLine(startTimeMs = 1000, words = "  "),
+                LyricsLine(startTimeMs = 2000, words = "hello")
+            )
         )
 
-        val richLines = lines.toRichLyricLines()
+        val richLines = response.toLyrics()
         assertEquals(1, richLines.size)
         assertEquals("hello", richLines[0].text)
     }
 
     @Test
-    fun lyricsData转富歌词列表() {
-        val data = ProtoLyricsData(
-            syncType = 2,
-            lines = listOf(
-                ProtoLyricLine(
-                    startTimeMs = 0,
-                    words = "hi",
-                    syllables = listOf(ProtoSyllable(0, 2, 100))
-                )
-            )
-        )
-
-        val richLines = data.toLyrics()
-        assertEquals(1, richLines.size)
-        assertEquals(listOf("hi"), richLines[0].words!!.map { it.text })
+    fun 空字节返回null() {
+        assertNull(ByteArray(0).toSongOrNull(trackMetadata("track-1")))
     }
 
-    @Test
-    fun JSON响应走原有解析路径() {
-        val json = """
-            {"lyrics":{"syncType":"LINE_SYNCED","lines":[
-                {"startTimeMs":"0","words":"hello","endTimeMs":"100"}
-            ]}}
-        """.trimIndent()
-
-        val song = json.toByteArray().toSongOrNull("track-1")
-        assertNotNull(song)
-        assertEquals("hello", song!!.lyrics!!.single().text)
-    }
+    private fun trackMetadata(id: String) = TrackMetadata(
+        id = id,
+        title = null,
+        artist = null,
+        duration = 0L
+    )
 }

@@ -26,6 +26,7 @@
             <option value="$PROJECT_DIR$/common" />
             <option value="$PROJECT_DIR$/common/base" />
             <option value="$PROJECT_DIR$/common/base/cloud-lyric-engine" />
+            <option value="$PROJECT_DIR$/common/base/dexkit" />
             <option value="$PROJECT_DIR$/common/base/extensions-android" />
             <option value="$PROJECT_DIR$/common/base/extensions-kt" />
             <option value="$PROJECT_DIR$/common/codec" />

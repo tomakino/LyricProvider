@@ -54,7 +54,6 @@ class AndroidLibraryConventionPlugin : Plugin<Project> {
             add("implementation", projectRef.lib("kavaref-android"))
             add("implementation", projectRef.lib("kavaref-extension"))
             add("compileOnly", projectRef.lib("libxposed-api"))
-            add("compileOnly", projectRef.lib("xposed-api"))
             add("implementation", projectRef.lib("kotlinx-serialization-json"))
             add("implementation", projectRef.lib("androidx-core-ktx"))
             add("testImplementation", projectRef.lib("junit"))

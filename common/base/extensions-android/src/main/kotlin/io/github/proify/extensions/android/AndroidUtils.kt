@@ -6,44 +6,31 @@
 
 package io.github.proify.extensions.android
 
-import de.robv.android.xposed.XC_MethodReplacement
-import de.robv.android.xposed.XposedHelpers
+import com.highcapable.kavaref.KavaRef.Companion.resolve
+import com.highcapable.yukihookapi.extension.kavaref.hook
+import com.highcapable.yukihookapi.extension.kavaref.toClass
+import com.highcapable.yukihookapi.hook.param.PackageParam
 
 /**
  * @author Lin
  */
 object AndroidUtils {
+    context(_: PackageParam)
     fun openBluetoothA2dpOn(classLoader: ClassLoader?) {
         if (classLoader == null) return
-        XposedHelpers.findAndHookMethod(
-            "android.media.AudioManager",
-            classLoader,
-            "isBluetoothA2dpOn",
-            XC_MethodReplacement.returnConstant(true)
-        )
-        XposedHelpers.findAndHookMethod(
-            "android.bluetooth.BluetoothAdapter",
-            classLoader,
-            "isEnabled",
-            XC_MethodReplacement.returnConstant(true)
-        )
-    }
 
-//    fun getStringForStateInt(state: Int): String {
-//        return when (state) {
-//            PlaybackState.STATE_NONE -> "NONE"
-//            PlaybackState.STATE_STOPPED -> "STOPPED"
-//            PlaybackState.STATE_PAUSED -> "PAUSED"
-//            PlaybackState.STATE_PLAYING -> "PLAYING"
-//            PlaybackState.STATE_FAST_FORWARDING -> "FAST_FORWARDING"
-//            PlaybackState.STATE_REWINDING -> "REWINDING"
-//            PlaybackState.STATE_BUFFERING -> "BUFFERING"
-//            PlaybackState.STATE_ERROR -> "ERROR"
-//            PlaybackState.STATE_CONNECTING -> "CONNECTING"
-//            PlaybackState.STATE_SKIPPING_TO_PREVIOUS -> "SKIPPING_TO_PREVIOUS"
-//            PlaybackState.STATE_SKIPPING_TO_NEXT -> "SKIPPING_TO_NEXT"
-//            PlaybackState.STATE_SKIPPING_TO_QUEUE_ITEM -> "SKIPPING_TO_QUEUE_ITEM"
-//            else -> "UNKNOWN"
-//        }
-//    }
+        "android.media.AudioManager".toClass(classLoader)
+            .resolve()
+            .firstMethod {
+                name = "isBluetoothA2dpOn"
+                emptyParameters()
+            }.hook { intercept(true) }
+
+        "android.bluetooth.BluetoothAdapter".toClass(classLoader)
+            .resolve()
+            .firstMethod {
+                name = "isEnabled"
+                emptyParameters()
+            }.hook { intercept(true) }
+    }
 }

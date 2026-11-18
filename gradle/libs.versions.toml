@@ -13,7 +13,6 @@ okhttp = "5.5.1"
 provider = "0.1.70"
 provider-model = "0.1.70"
 taglib = "1.0.6"
-xposed = "82"
 libxposed = "102.0.0"
 yukihook = "1.5.0"
 ksp = "2.3.6"
@@ -46,9 +45,9 @@ yukihook-runtime-libxposed = { module = "com.highcapable.yukihookapi:yukihook-ru
 kavaref-core = { module = "com.highcapable.kavaref:kavaref-core", version.ref = "kavaref" }
 kavaref-android = { module = "com.highcapable.kavaref:kavaref-android", version.ref = "kavaref" }
 kavaref-extension = { module = "com.highcapable.kavaref:kavaref-extension", version.ref = "kavaref" }
-xposed-api = { module = "de.robv.android.xposed:api", version.ref = "xposed" }
 libxposed-api = { module = "io.github.libxposed:api", version.ref = "libxposed" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
+kotlinx-serialization-protobuf = { module = "org.jetbrains.kotlinx:kotlinx-serialization-protobuf", version.ref = "kotlinxSerializationJson" }
 junit-jupiter = { group = "org.junit.jupiter", name = "junit-jupiter", version.ref = "junitJupiter" }
 
 # build-logic（convention plugins）使用

@@ -6,16 +6,12 @@
 
 package io.github.proify.lyricon.library.carprovider
 
-import com.highcapable.yukihookapi.extension.kavaref.toClass
-import com.highcapable.yukihookapi.extension.kavaref.hook
-
-import com.highcapable.yukihookapi.extension.kavaref.hook
-
-import com.highcapable.yukihookapi.extension.kavaref.toClass
-
 import android.media.MediaMetadata
 import android.media.session.PlaybackState
 import com.highcapable.kavaref.KavaRef.Companion.resolve
+import com.highcapable.kavaref.extension.classOf
+import com.highcapable.yukihookapi.extension.kavaref.hook
+import com.highcapable.yukihookapi.extension.kavaref.toClass
 import com.highcapable.yukihookapi.hook.entity.YukiBaseHooker
 import com.highcapable.yukihookapi.hook.log.YLog
 import io.github.proify.extensions.android.AndroidUtils
@@ -32,7 +28,7 @@ open class CarProvider(
     private var provider: LyriconProvider? = null
 
     override fun onHook() {
-        AndroidUtils.openBluetoothA2dpOn(appClassLoader)
+        AndroidUtils.openBluetoothA2dpOn(hostClassLoader)
         YLog.debug(tag = tag, msg = "进程: $processName")
 
         registerAppLifecycle(true) { onCreate { initProvider() } }
@@ -56,7 +52,7 @@ open class CarProvider(
             .apply {
                 firstMethod {
                     name = "setPlaybackState"
-                    parameters(PlaybackState::class.java)
+                    parameters(classOf<PlaybackState>())
                 }.hook {
                     after {
                         val state = (args[0] as? PlaybackState)

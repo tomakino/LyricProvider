@@ -12,9 +12,10 @@ import com.highcapable.yukihookapi.hook.xposed.YukiHookXposedModule
 
 @YukiHookLibXposedEntry(
     targetApiVersion = 101,
-    scope = arrayOf("com.spotify.music"),
+    scope = ["com.spotify.music"],
     staticScope = true
 )
+/** Xposed 模块入口。 */
 open class HookEntry : YukiHookXposedModule {
 
     override fun onHook() {

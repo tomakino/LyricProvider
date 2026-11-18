@@ -21,7 +21,6 @@ class YukiHookConventionPlugin : Plugin<Project> {
             add("implementation", projectRef.lib("kavaref-android"))
             add("implementation", projectRef.lib("kavaref-extension"))
             add("compileOnly", projectRef.lib("libxposed-api"))
-            add("compileOnly", projectRef.lib("xposed-api"))
             add("ksp", projectRef.lib("yukihook-compiler"))
         }
     }

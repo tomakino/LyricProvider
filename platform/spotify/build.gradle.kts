@@ -20,7 +20,9 @@ android {
 }
 
 dependencies {
+    implementation(project(":common:base:dexkit"))
     implementation(project(":common:base:extensions-android"))
     implementation(libs.okhttp)
     implementation(libs.dexkit)
+    implementation(libs.kotlinx.serialization.protobuf)
 }

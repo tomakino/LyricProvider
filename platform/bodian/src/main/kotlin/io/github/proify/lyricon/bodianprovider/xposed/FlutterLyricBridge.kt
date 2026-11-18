@@ -6,6 +6,7 @@
 
 package io.github.proify.lyricon.bodianprovider.xposed
 
+import com.highcapable.kavaref.extension.classOf
 import com.highcapable.yukihookapi.hook.log.YLog
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedHelpers
@@ -48,8 +49,8 @@ object FlutterLyricBridge {
             XposedHelpers.findAndHookConstructor(
                 CLASS_METHOD_CALL,
                 classLoader,
-                String::class.java,
-                Any::class.java,
+                classOf<String>(),
+                classOf<Any>(),
                 object : XC_MethodHook() {
                     override fun afterHookedMethod(param: MethodHookParam) {
                         val arguments = param.args.getOrNull(1) as? Map<*, *> ?: return

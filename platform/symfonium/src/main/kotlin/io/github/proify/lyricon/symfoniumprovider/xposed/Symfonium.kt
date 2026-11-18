@@ -10,6 +10,7 @@ import android.media.MediaMetadata
 import android.media.session.PlaybackState
 import android.net.Uri
 import com.highcapable.kavaref.KavaRef.Companion.resolve
+import com.highcapable.kavaref.extension.classOf
 import com.highcapable.yukihookapi.extension.kavaref.hook
 import com.highcapable.yukihookapi.extension.kavaref.toClass
 import com.highcapable.yukihookapi.hook.entity.YukiBaseHooker
@@ -43,12 +44,12 @@ class Symfonium : YukiBaseHooker() {
         }
         hookMediaSession()
 
-        Uri::class.java.name.toClass()
+        classOf<Uri>().name.toClass()
             .resolve().apply {
 
                 firstMethod {
                     name = "parse"
-                    parameters(String::class.java)
+                    parameters(classOf<String>())
                 }.hook {
                     after {
                         val uri = args[0] as String
@@ -124,7 +125,7 @@ class Symfonium : YukiBaseHooker() {
         "android.media.session.MediaSession".toClass().resolve().apply {
             firstMethod {
                 name = "setPlaybackState"
-                parameters(PlaybackState::class.java)
+                parameters(classOf<PlaybackState>())
             }.hook {
                 after {
                     val state = args[0] as? PlaybackState

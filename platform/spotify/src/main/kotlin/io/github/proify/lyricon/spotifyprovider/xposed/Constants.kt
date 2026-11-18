@@ -6,6 +6,7 @@
 
 package io.github.proify.lyricon.spotifyprovider.xposed
 
+/** 模块常量。 */
 object Constants {
     const val PROVIDER_PACKAGE_NAME: String = "io.github.proify.lyricon.spotifyprovider"
     const val MUSIC_PACKAGE_NAME: String = "com.spotify.music"

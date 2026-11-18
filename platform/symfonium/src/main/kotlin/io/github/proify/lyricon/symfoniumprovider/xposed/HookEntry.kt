@@ -12,7 +12,7 @@ import com.highcapable.yukihookapi.hook.xposed.YukiHookXposedModule
 
 @YukiHookLibXposedEntry(
     targetApiVersion = 101,
-    scope = arrayOf("app.symfonik.music.player"),
+    scope = ["app.symfonik.music.player"],
     staticScope = true
 )
 open class HookEntry : YukiHookXposedModule {
