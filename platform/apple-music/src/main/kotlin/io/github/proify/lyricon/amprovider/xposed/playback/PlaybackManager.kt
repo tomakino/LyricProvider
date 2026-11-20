@@ -6,9 +6,9 @@
 
 package io.github.proify.lyricon.amprovider.xposed.playback
 
+import io.github.proify.amkit.parser.toSong
 import io.github.proify.lyricon.amprovider.xposed.cache.LyricsCache
 import io.github.proify.lyricon.amprovider.xposed.lyrics.AmkitLyricsSource
-import io.github.proify.lyricon.amprovider.xposed.lyrics.LyricsMapper
 import io.github.proify.lyricon.amprovider.xposed.util.DebugLog
 import io.github.proify.lyricon.lyric.model.Song
 import io.github.proify.lyricon.provider.RemotePlayer
@@ -65,12 +65,11 @@ object PlaybackManager {
         try {
             val document = lyricsSource?.fetch(id) ?: return
 
-            val song = LyricsMapper.toSong(
+            val song = document.toSong(
                 id = id,
                 name = title,
                 artist = artist,
                 durationMs = durationMs,
-                document = document,
             )
             LyricsCache.save(song)
             if (currentId == id) {

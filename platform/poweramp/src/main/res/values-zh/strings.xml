@@ -18,5 +18,4 @@
     <string name="desc_auto_save">将联网搜索到的歌词保存为同名 LRC 文件</string>
     <string name="lyricon_module_description">PowerAmp 音乐播放器歌词适配器，支持内嵌歌词读取、网络获取歌词。</string>
     <string name="lyricon_module_category">本地播放器</string>
-    <string name="lyricon_module_author">newcovid</string>
 </resources>

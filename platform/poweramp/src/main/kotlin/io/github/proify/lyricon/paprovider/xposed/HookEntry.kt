@@ -13,13 +13,14 @@ import com.highcapable.yukihookapi.hook.xposed.YukiHookXposedModule
 
 @YukiHookLibXposedEntry(
     targetApiVersion = 101,
-    scope = arrayOf("com.maxmpz.audioplayer", "com.maxmpz.audioplayer.unlock"),
+    scope = ["com.maxmpz.audioplayer", "com.maxmpz.audioplayer.unlock"],
     staticScope = true
 )
 class HookEntry : YukiHookXposedModule {
 
     override fun onHook() = encase {
         loadApp(name = "com.maxmpz.audioplayer", PowerAmp)
+        loadApp(name = "com.maxmpz.audioplayer.unlock", PowerAmp)
     }
 
     override fun onInit() = configure {

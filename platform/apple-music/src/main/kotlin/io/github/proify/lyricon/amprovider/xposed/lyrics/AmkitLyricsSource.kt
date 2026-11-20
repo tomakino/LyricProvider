@@ -7,9 +7,9 @@
 package io.github.proify.lyricon.amprovider.xposed.lyrics
 
 import io.github.proify.lyricon.amprovider.xposed.util.DebugLog
-import io.github.tomakino.amkit.download.AppleMusicLyricsDownloader
-import io.github.tomakino.amkit.parser.model.LyricsDocument
-import io.github.tomakino.amkit.parser.TtmlLyricsParser
+import io.github.proify.amkit.download.AppleMusicLyricsDownloader
+import io.github.proify.amkit.parser.model.LyricsDocument
+import io.github.proify.amkit.parser.TtmlLyricsParser
 
 /** amkit 直连歌词来源：`amkit-download` 取原文，`amkit-parser` 解析。 */
 class AmkitLyricsSource {

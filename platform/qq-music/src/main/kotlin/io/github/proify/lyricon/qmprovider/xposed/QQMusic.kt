@@ -26,7 +26,7 @@ import io.github.proify.lyricon.lyric.model.lyricMetadataOf
 import io.github.proify.lyricon.provider.LyriconFactory
 import io.github.proify.lyricon.provider.LyriconProvider
 import io.github.proify.lyricon.provider.ProviderLogo
-import io.github.proify.qrckit.LyricResponse
+import io.github.proify.qrckit.parser.QrcLyricResponse
 
 object QQMusic : YukiBaseHooker() {
 
@@ -202,11 +202,11 @@ object QQMusic : YukiBaseHooker() {
             lyriconProvider?.player?.setSong(song)
         }
 
-        override fun onDownloadFinished(response: LyricResponse) {
+        override fun onDownloadFinished(response: QrcLyricResponse) {
             val song = response.toLyriconSong()
             DiskSongCache.put(song)
 
-            if (response.id == currentMediaId) {
+            if (response.musicId == currentMediaId) {
                 updateLyriconSong(song)
             }
         }
@@ -215,11 +215,11 @@ object QQMusic : YukiBaseHooker() {
             YLog.error(tag = TAG, msg = "Lyric download failed for $id", e = e)
         }
 
-        private fun LyricResponse.toLyriconSong(): Song {
-            val cachedMetadata = MediaMetadataCache.get(id)
+        private fun QrcLyricResponse.toLyriconSong(): Song {
+            val cachedMetadata = MediaMetadataCache.get(musicId)
             val lyrics = parsedLyric.richLyricLines.removeInvalidTranslation()
             return Song(
-                id = id,
+                id = musicId,
                 name = cachedMetadata?.title,
                 artist = cachedMetadata?.artist,
                 duration = cachedMetadata?.duration ?: 0,

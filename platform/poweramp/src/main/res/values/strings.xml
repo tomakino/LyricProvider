@@ -21,5 +21,5 @@
 
     <string name="lyricon_module_description">Lyric adapter for PowerAmp Music Player. Supports embedded lyrics and online lyric fetching.</string>
     <string name="lyricon_module_category">Local Player</string>
-    <string name="lyricon_module_author">newcovid</string>
+    <string name="lyricon_module_author" translatable="false">newcovid, Tomakino</string>
 </resources>

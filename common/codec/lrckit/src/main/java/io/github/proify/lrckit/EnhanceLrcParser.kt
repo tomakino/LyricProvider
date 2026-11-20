@@ -6,283 +6,288 @@
 
 package io.github.proify.lrckit
 
+import io.github.proify.lyricon.lyric.model.LyricLine
 import io.github.proify.lyricon.lyric.model.LyricWord
-import io.github.proify.lyricon.lyric.model.RichLyricLine
+import java.util.regex.Pattern
 
 /**
- * 增强型歌词解析器。
- * 兼容标准 LRC、逐字时间轴及多角色标签，并支持正文包含方括号 [] 的特殊文本。
+ * 增强型 LRC 解析器。
+ * 解析行时间轴与 `<mm:ss.SSS>` 逐字时间标签；同一时间点只保留首条。
  */
 object EnhanceLrcParser {
 
-    /** 严格匹配行首的一个或多个时间戳标签，如 [00:12.34][00:15.00] */
-    private val TIME_PREFIX_REGEX = Regex("""^(\[(\d{1,3})[ :.](\d{2})(?:[ :.](\d{1,3}))?])+""")
+    /** 行首连续的行时间标签。 */
+    private val LINE_PREFIX = Pattern.compile("""^(?:\[\d{1,3}[ :.]\d{2}(?:[ :.]\d{1,3})?])+""")
 
-    /** 匹配单个时间戳标签，用于从前缀字符串中提取具体数值 */
-    private val TAG_REGEX = Regex("""\[(\d{1,3})[ :.](\d{2})(?:[ :.](\d{1,3}))?]""")
+    /** 单个行时间标签。 */
+    private val LINE_TAG = Pattern.compile("""\[(\d{1,3})[ :.](\d{2})(?:[ :.](\d{1,3}))?]""")
 
-    /** 匹配逐字时间标签，如 <00:12.34> */
-    private val WORD_REGEX = Regex("""<(\d{1,3})[ :.](\d{2})(?:[ :.](\d{1,3}))?>""")
+    /** 逐字时间标签。 */
+    private val WORD_TAG = Pattern.compile("""<(\d{1,3})[ :.](\d{2})(?:[ :.](\d{1,3}))?>""")
 
-    /** 识别角色前缀，支持 v1 (主唱) 或 bg (背景音) */
-    private val PERSON_REGEX = Regex("""^(v\d+|bg):\s*(.+)$""", RegexOption.IGNORE_CASE)
+    /** 元数据标签。 */
+    private val META_TAG = Pattern.compile("""^\[(\w+)\s*:\s*(.*)]$""")
 
-    /** 匹配元数据标签，如 [ar:歌手名] */
-    private val META_REGEX = Regex("""^\[(\w+)\s*:\s*(.*)]$""")
-
-    /** 无下一行且无歌曲总时长时，给最后一行兜底的持续时长 */
+    /** 无后继行且无总时长时，末行的持续时长（毫秒）。 */
     private const val FALLBACK_LINE_DURATION = 5000L
 
-    /** 同一时间点的多段副轨道（和声/对唱）之间的分隔符 */
-    private const val SECONDARY_SEPARATOR = "\n"
+    /** 元数据中全局偏移的键名。 */
+    private const val OFFSET_KEY = "offset"
 
+    /**
+     * 解析增强 LRC。
+     * @param raw 原始文本；null 或空白返回空文档。
+     * @param duration 音频总时长，单位为毫秒，用于确定末行结束时间。
+     * @return 按开始时间排序的文档；逐字数据位于每行的 words。
+     */
     fun parse(raw: String?, duration: Long = 0): EnhanceLrcDocument {
-        if (raw.isNullOrBlank()) return EnhanceLrcDocument(emptyMap(), emptyList())
+        if (raw.isNullOrBlank()) return EnhanceLrcDocument()
 
-        val lines = mutableListOf<RichLyricLine>()
-        val meta = mutableMapOf<String, String>()
-        val roles = mutableListOf<String>()
+        val metadata = mutableMapOf<String, String>()
+        val parsedLines = mutableListOf<ParsedLine>()
+        val sourceText = raw.removePrefix("\uFEFF")
 
-        raw.lineSequence().forEach { rawLine ->
-            val trimmed = rawLine.trim()
-            if (!trimmed.startsWith("[")) return@forEach
+        sourceText.lineSequence().forEach { source ->
+            val line = source.trimStart()
+            if (!line.startsWith("[")) return@forEach
 
-            val timeMatch = TIME_PREFIX_REGEX.find(trimmed)
-            if (timeMatch != null) {
-                // 核心修复：通过截取时间戳匹配范围之后的字符串作为正文，避免正文内的 [] 被误识别
-                val content = trimmed.substring(timeMatch.range.last + 1).trim()
-                parseStandardLine(timeMatch.value, content, roles).forEach { cur ->
-                    mergeLines(lines, cur)
+            val prefix = LINE_PREFIX.matcher(line)
+            if (prefix.find()) {
+                val times = extractTimes(line.substring(prefix.start(), prefix.end()))
+                if (times.isNotEmpty()) {
+                    parsedLines += parseLineBody(times, line.substring(prefix.end()).trimStart())
                 }
             } else {
-                // 非时间戳开头的行尝试作为元数据处理
-                handleMeta(trimmed, meta, lines)
-            }
-        }
-
-        val offset = meta["offset"]?.toLongOrNull() ?: 0L
-        val finalizedLines = finalize(lines, duration)
-
-        return EnhanceLrcDocument(meta, finalizedLines).run {
-            if (offset != 0L) applyOffset(offset) else this
-        }
-    }
-
-    /**
-     * 合并同时间戳行。若当前行与上一行开始时间一致，则将其追加为上一行的 secondary 副轨道。
-     * 通过 copy 重建列表元素而非就地修改，避免与调用方共享同一个可变实例。
-     */
-    private fun mergeLines(lines: MutableList<RichLyricLine>, cur: RichLyricLine) {
-        val last = lines.lastOrNull()
-        if (last == null || last.begin != cur.begin) {
-            lines.add(cur)
-            return
-        }
-
-        lines[lines.lastIndex] = last.copy(
-            secondary = appendText(last.secondary, cur.text),
-            secondaryWords = appendWords(last.secondaryWords, cur.words),
-            isAlignedRight = last.isAlignedRight || cur.isAlignedRight
-        )
-    }
-
-    /**
-     * 追加副轨道文本。多段和声按换行拼接，避免后段覆盖前段造成信息丢失。
-     */
-    private fun appendText(existing: String?, incoming: String?): String? {
-        val parts = listOfNotNull(
-            existing?.takeIf { it.isNotEmpty() },
-            incoming?.takeIf { it.isNotEmpty() }
-        )
-        return parts.takeIf { it.isNotEmpty() }?.joinToString(SECONDARY_SEPARATOR)
-    }
-
-    /**
-     * 追加副轨道的逐字数据。段与段之间插入一个换行分隔词，
-     * 保证 secondaryWords 直接拼接后与 secondary 文本严格一致。
-     * @param boundary 分隔词的时间点，取后一段首词时间，保证时间轴非降序。
-     */
-    private fun appendWords(
-        existing: List<LyricWord>?,
-        incoming: List<LyricWord>?
-    ): List<LyricWord>? {
-        if (existing.isNullOrEmpty()) return incoming
-        if (incoming.isNullOrEmpty()) return existing
-
-        val boundary = incoming.first().begin
-        val separator = LyricWord(begin = boundary, end = boundary, text = SECONDARY_SEPARATOR)
-        return existing + separator + incoming
-    }
-
-    /**
-     * 解析具体的一行歌词内容。
-     * @param timeTags 仅包含行首时间戳的字符串。
-     * @param content 歌词正文内容。
-     */
-    private fun parseStandardLine(
-        timeTags: String,
-        content: String,
-        roles: MutableList<String>
-    ): List<RichLyricLine> {
-        var person: String? = null
-        var text = content
-
-        PERSON_REGEX.matchEntire(content)?.let {
-            person = it.groupValues[1].lowercase()
-            text = it.groupValues[2]
-            // 第一个出现的非 bg 角色被定义为主角色
-            if (roles.isEmpty() && person != "bg") roles.add(person)
-        }
-
-        val words = parseWords(text)
-        // 逐字文本必须与 words 直接拼接结果一致（与 RichLyricLine.normalize 及 QRC/YRC/KRC 保持一致），
-        // 插入任何分隔符都会破坏中文/日文逐字歌词的显示
-        val plainText = if (words.isNotEmpty()) {
-            words.joinToString("") { it.text.orEmpty() }
-        } else {
-            text
-        }
-
-        // 背景音或非首位角色默认右对齐
-        val isRight =
-            person == "bg" || (person != null && roles.isNotEmpty() && person != roles.first())
-
-        return TAG_REGEX.findAll(timeTags).map { m ->
-            val ms = toMs(m.groupValues[1], m.groupValues[2], m.groupValues.getOrNull(3))
-            RichLyricLine(
-                begin = words.firstOrNull()?.begin ?: ms,
-                // 行的结束时间统一交给 finalize 推导，此处只记录该时间戳本身
-                end = ms,
-                text = plainText,
-                words = words.takeIf { it.isNotEmpty() },
-                isAlignedRight = isRight
-            )
-        }.toList()
-    }
-
-    /**
-     * 解析逐字时间。通过寻找连续的 <time> 标签并截取其中间的字符来实现。
-     * 注意：最后一个字只有开始时间（无后续标签），其结束时间由 finalize 对齐到行结束时间。
-     */
-    private fun parseWords(content: String): List<LyricWord> {
-        val matches = WORD_REGEX.findAll(content).toList()
-        if (matches.isEmpty()) return emptyList()
-
-        return matches.mapIndexed { i, m ->
-            val start = toMs(m.groupValues[1], m.groupValues[2], m.groupValues.getOrNull(3))
-            val nextMatch = matches.getOrNull(i + 1)
-            // 截取当前标签结束到下一个标签开始之间的文字
-            val text =
-                content.substring(m.range.last + 1, nextMatch?.range?.first ?: content.length)
-
-            LyricWord(begin = start, text = text).apply {
-                nextMatch?.let { next ->
-                    end = toMs(
-                        next.groupValues[1],
-                        next.groupValues[2],
-                        next.groupValues.getOrNull(3)
-                    )
-                    duration = (end - begin).coerceAtLeast(0)
+                val meta = META_TAG.matcher(line.trimEnd())
+                if (meta.matches()) {
+                    metadata[meta.group(1)] = meta.group(2).trim()
                 }
             }
         }
+
+        val offset = metadata.entries
+            .firstOrNull { it.key.equals(OFFSET_KEY, ignoreCase = true) }
+            ?.value
+            ?.toLongOrNull()
+            ?: 0L
+
+        return EnhanceLrcDocument(metadata, buildLines(parsedLines, offset, duration))
     }
 
     /**
-     * 转换时间标签为毫秒。根据毫秒位字符串长度自动调整倍率（1位x100, 2位x10, 3位x1）。
+     * 解析一行的正文，提取逐字数据与可选的结束标签。
+     * @param times 该行的全部行时间标签，毫秒。
+     * @param content 剥离行时间标签后的正文。
+     * @return 行文本、逐字数据与结束标签。
      */
-    private fun toMs(mStr: String, sStr: String, fStr: String?): Long {
-        val m = mStr.toLongOrNull() ?: 0L
-        val s = sStr.toLongOrNull() ?: 0L
-        val ms = when (fStr?.length) {
-            1 -> fStr.toLong() * 100
-            2 -> fStr.toLong() * 10
-            3 -> fStr.toLong()
+    private fun parseLineBody(times: List<Long>, content: String): ParsedLine {
+        val spans = collectWordSpans(content)
+        if (spans.isEmpty()) return ParsedLine(times, content.trim(), emptyList(), null)
+
+        val leadingText = content.substring(0, spans.first().start)
+        val words = mutableListOf<ParsedWord>()
+        var endTag: Long? = null
+        var leadingConsumed = false
+
+        spans.forEachIndexed { index, span ->
+            val next = spans.getOrNull(index + 1)
+            val text = content.substring(span.end, next?.start ?: content.length)
+
+            // 行内最后一个标签之后没有任何字符，说明它是该行的结束时间，而不是新词的开始
+            if (next == null && text.isEmpty()) {
+                endTag = span.time
+                return@forEachIndexed
+            }
+            if (text.isEmpty()) return@forEachIndexed
+
+            val wordText = if (!leadingConsumed && leadingText.isNotBlank()) {
+                leadingConsumed = true
+                leadingText + text
+            } else {
+                text
+            }
+            words += ParsedWord(span.time, wordText)
+        }
+
+        val text = if (words.isEmpty()) {
+            WORD_TAG.matcher(content).replaceAll("").trim()
+        } else {
+            words.joinToString("") { it.text }
+        }
+        return ParsedLine(times, text, words, endTag)
+    }
+
+    /**
+     * 展开行时间标签，推导结束时间并收束逐字时间窗。
+     * @param lines 已解析的原始行。
+     * @param offset 全局偏移毫秒数。
+     * @param totalDuration 音频总时长，毫秒。
+     * @return 按开始时间排序的歌词行。
+     */
+    private fun buildLines(
+        lines: List<ParsedLine>,
+        offset: Long,
+        totalDuration: Long
+    ): List<LyricLine> {
+        val pending = lines.flatMap { line ->
+            line.times.map { time ->
+                PendingLine(
+                    begin = (time + offset).coerceAtLeast(0L),
+                    endTag = line.endTag?.let { (it + offset).coerceAtLeast(0L) },
+                    words = line.words.map { it.copy(begin = (it.begin + offset).coerceAtLeast(0L)) },
+                    text = line.text,
+                    allowEndTag = line.times.size == 1,
+                )
+            }
+        }.distinctBy { it.begin }.sortedBy { it.begin }
+
+        val distinctBegins = pending.map { it.begin }.distinct()
+        val successor = HashMap<Long, Long>(distinctBegins.size)
+        distinctBegins.forEachIndexed { index, begin ->
+            distinctBegins.getOrNull(index + 1)?.let { successor[begin] = it }
+        }
+
+        return pending.map { line ->
+            val providedEnd = line.endTag?.takeIf { line.allowEndTag && it > line.begin }
+            val end = providedEnd
+                ?: successor[line.begin]
+                ?: if (totalDuration > line.begin) totalDuration else line.begin + FALLBACK_LINE_DURATION
+            val lineEnd = end.coerceAtLeast(line.begin)
+            val words = if (line.words.isEmpty()) {
+                null
+            } else {
+                alignWords(line.words, line.begin, lineEnd)
+            }
+            val text = if (words.isNullOrEmpty()) {
+                line.text
+            } else {
+                words.joinToString("") { it.text.orEmpty() }
+            }
+
+            LyricLine(
+                begin = line.begin,
+                end = lineEnd,
+                duration = lineEnd - line.begin,
+                text = text,
+                words = words,
+            )
+        }
+    }
+
+    /**
+     * 将逐字时间窗限制在行时间窗内，末词对齐行结束时间。
+     * @param words 原始逐字数据。
+     * @param lineBegin 行开始时间，毫秒。
+     * @param lineEnd 行结束时间，毫秒。
+     * @return 时间合法的逐字数据。
+     */
+    private fun alignWords(
+        words: List<ParsedWord>,
+        lineBegin: Long,
+        lineEnd: Long
+    ): List<LyricWord> = words.mapIndexed { index, word ->
+        val begin = word.begin.coerceIn(lineBegin, lineEnd)
+        val end = if (index == words.lastIndex) {
+            lineEnd
+        } else {
+            words[index + 1].begin.coerceIn(begin, lineEnd)
+        }
+        LyricWord(begin = begin, end = end, duration = end - begin, text = word.text)
+    }
+
+    /**
+     * 从行首前缀中提取全部时间标签。
+     * @param prefix 仅含行时间标签的字符串。
+     * @return 按出现顺序排列的毫秒时间。
+     */
+    private fun extractTimes(prefix: String): List<Long> =
+        LINE_TAG.matcher(prefix).let { matcher ->
+            buildList {
+                while (matcher.find()) {
+                    add(toMs(matcher.group(1), matcher.group(2), matcher.group(3)))
+                }
+            }
+        }
+
+    /**
+     * 定位正文中的全部逐字时间标签。
+     * @param content 剥离行时间标签后的正文。
+     * @return 按出现顺序排列的标签时间与文本区间。
+     */
+    private fun collectWordSpans(content: String): List<WordSpan> {
+        val matcher = WORD_TAG.matcher(content)
+        val spans = mutableListOf<WordSpan>()
+        while (matcher.find()) {
+            spans += WordSpan(
+                time = toMs(matcher.group(1), matcher.group(2), matcher.group(3)),
+                start = matcher.start(),
+                end = matcher.end(),
+            )
+        }
+        return spans
+    }
+
+    /**
+     * 将时间标签转换为毫秒。
+     * @param minute 分钟部分。
+     * @param second 秒部分。
+     * @param fraction 毫秒部分，位数决定倍率。
+     * @return 自歌曲开始起的毫秒数。
+     */
+    private fun toMs(minute: String, second: String, fraction: String?): Long {
+        val m = minute.toLongOrNull() ?: 0L
+        val s = second.toLongOrNull() ?: 0L
+        val ms = when (fraction?.length) {
+            1 -> (fraction.toLongOrNull() ?: 0L) * 100
+            2 -> (fraction.toLongOrNull() ?: 0L) * 10
+            3 -> fraction.toLongOrNull() ?: 0L
             else -> 0L
         }
         return m * 60000 + s * 1000 + ms
     }
 
     /**
-     * 处理元数据。特殊逻辑：若 tag 为 bg，则尝试将其内容作为上一行歌词的副轨道合并。
+     * 原始行。
+     * @property times 该行的全部行时间标签，毫秒。
+     * @property text 行文本。
+     * @property words 逐字数据。
+     * @property endTag 行内结束标签对应的时间，毫秒。
      */
-    private fun handleMeta(
-        line: String,
-        meta: MutableMap<String, String>,
-        lines: MutableList<RichLyricLine>
-    ) {
-        META_REGEX.matchEntire(line)?.let { m ->
-            val tag = m.groupValues[1].lowercase()
-            val value = m.groupValues[2].trim()
-
-            if (tag == "bg" && lines.isNotEmpty()) {
-                val words = parseWords(value)
-                val last = lines.last()
-                val resolvedText =
-                    if (words.isNotEmpty()) words.joinToString("") { it.text.orEmpty() } else value
-
-                lines[lines.lastIndex] = last.copy(
-                    secondary = appendText(last.secondary, resolvedText),
-                    secondaryWords = appendWords(
-                        last.secondaryWords,
-                        words.takeIf { it.isNotEmpty() })
-                )
-            } else {
-                meta[tag] = value
-            }
-        }
-    }
+    private class ParsedLine(
+        val times: List<Long>,
+        val text: String,
+        val words: List<ParsedWord>,
+        val endTag: Long?,
+    )
 
     /**
-     * 完成解析后的后处理：排序时间轴，推导每行结束时间，并把逐字末词对齐到行结束时间。
-     * 全过程通过 copy 产出新对象，不就地修改传入的行对象。
+     * 原始逐字数据。
+     * @property begin 词开始时间，毫秒。
+     * @property text 词文本。
      */
-    private fun finalize(lines: List<RichLyricLine>, totalDur: Long): List<RichLyricLine> {
-        val sorted = lines.sortedBy { it.begin }
-
-        // 相同 begin 视为同一时间点：预计算每个时间点之后的下一个更晚时间点
-        val distinctBegins = sorted.map { it.begin }.distinct()
-        val successor = HashMap<Long, Long>(distinctBegins.size)
-        distinctBegins.forEachIndexed { index, begin ->
-            distinctBegins.getOrNull(index + 1)?.let { successor[begin] = it }
-        }
-
-        return sorted.map { line ->
-            val lineEnd = resolveLineEnd(line, successor[line.begin], totalDur)
-            line.copy(
-                end = lineEnd,
-                duration = (lineEnd - line.begin).coerceAtLeast(0L),
-                words = alignLastWordTo(line.words, lineEnd)
-            )
-        }
-    }
+    private data class ParsedWord(val begin: Long, val text: String)
 
     /**
-     * 行结束时间优先级：已有的有效结束时间 > 下一个更晚的时间点 > 歌曲总时长 > 兜底时长。
+     * 逐字时间标签的文本区间。
+     * @property time 标签对应的时间，毫秒。
+     * @property start 标签在正文中的起始下标。
+     * @property end 标签在正文中的结束下标。
      */
-    private fun resolveLineEnd(
-        line: RichLyricLine,
-        nextDistinctBegin: Long?,
-        totalDur: Long
-    ): Long = when {
-        line.end > line.begin -> line.end
-        nextDistinctBegin != null -> nextDistinctBegin
-        totalDur > line.begin -> totalDur
-        else -> line.begin + FALLBACK_LINE_DURATION
-    }
+    private class WordSpan(val time: Long, val start: Int, val end: Int)
 
     /**
-     * 逐字时间轴的最后一个字只有开始时间、没有结束时间，
-     * 统一对齐到行结束时间，使卡拉 OK 末字同样具备有效时长（与 KRC 的收尾处理保持一致）。
+     * 待推导结束时间的行。
+     * @property begin 行开始时间，毫秒。
+     * @property endTag 行内结束标签对应的时间，毫秒。
+     * @property words 已偏移的逐字数据。
+     * @property text 行文本。
+     * @property allowEndTag 是否允许使用行内结束标签。
      */
-    private fun alignLastWordTo(words: List<LyricWord>?, lineEnd: Long): List<LyricWord>? {
-        val last = words?.lastOrNull() ?: return words
-        if (last.end >= lineEnd) return words
-
-        // 数据源畸形（逐字时间晚于行结束）时至少保证 end 不早于 begin，避免产生非法区间
-        val alignedEnd = maxOf(lineEnd, last.begin)
-        val aligned =
-            last.copy(end = alignedEnd, duration = (alignedEnd - last.begin).coerceAtLeast(0L))
-        return words.dropLast(1) + aligned
-    }
+    private class PendingLine(
+        val begin: Long,
+        val endTag: Long?,
+        val words: List<ParsedWord>,
+        val text: String,
+        val allowEndTag: Boolean,
+    )
 }

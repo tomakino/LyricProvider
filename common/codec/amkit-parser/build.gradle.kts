@@ -6,8 +6,6 @@
 
 plugins {
     id("java-library")
-    id("jacoco")
-    id("maven-publish")
     alias(libs.plugins.jetbrains.kotlin.jvm)
     alias(libs.plugins.kotlin.serialization)
 }
@@ -16,36 +14,22 @@ group = "io.github.tomakino"
 version = "0.1.0"
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_1_8
-    targetCompatibility = JavaVersion.VERSION_1_8
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
 }
 
 kotlin {
     compilerOptions {
-        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_1_8
-        freeCompilerArgs.add("-Xjdk-release=1.8")
+        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
     }
 }
 
 dependencies {
+    implementation(project(":common:codec:amkit-locale"))
+
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.serialization.json)
+    implementation(libs.lyricon.lyric.model)
 
     testImplementation(kotlin("test"))
-}
-
-tasks.test {
-    testLogging {
-        showStandardStreams = true
-        events("passed", "failed", "skipped")
-    }
-    finalizedBy(tasks.jacocoTestReport)
-}
-
-tasks.jacocoTestReport {
-    dependsOn(tasks.test)
-    reports {
-        xml.required.set(true)
-        html.required.set(true)
-    }
 }

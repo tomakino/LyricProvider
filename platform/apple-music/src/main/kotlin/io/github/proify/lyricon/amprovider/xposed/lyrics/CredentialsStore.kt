@@ -6,11 +6,12 @@
 
 package io.github.proify.lyricon.amprovider.xposed.lyrics
 
+import android.annotation.SuppressLint
 import android.content.Context
+import io.github.proify.amkit.download.LyricsCredentials
 import io.github.proify.lyricon.amprovider.xposed.credentials.DeveloperTokenReader
 import io.github.proify.lyricon.amprovider.xposed.credentials.DeveloperTokenReaders
 import io.github.proify.lyricon.amprovider.xposed.util.DebugLog
-import io.github.tomakino.amkit.download.LyricsCredentials
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.io.File
@@ -23,6 +24,7 @@ import java.io.File
  * - Cookie：`CookieStoreTable.json` 中 domain 为 `apple.com` 的全部条目
  * - dsid / storefront：`X-Dsid` cookie 与 `BagConfig.json` 的 `countryCode`
  */
+@SuppressLint("StaticFieldLeak")
 object CredentialsStore {
 
     private const val COOKIES_FILE = "CookieStoreTable.json"

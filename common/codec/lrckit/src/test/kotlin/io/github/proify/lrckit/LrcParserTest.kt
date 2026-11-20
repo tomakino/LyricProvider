@@ -7,135 +7,322 @@
 package io.github.proify.lrckit
 
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertFalse
-import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 
 /**
- * LrcParser 单元测试类。
- * 覆盖了标准解析、多时间戳、中括号兼容性、元数据提取及偏移量处理。
+ * [LrcParser] 的解析测试。
+ * 以测试资源中的标准 LRC 为基准，并校验与 [EnhanceLrcParser] 的行级一致性。
  */
 class LrcParserTest {
 
     @Test
-    @DisplayName("测试基础解析：标准格式与时间转换")
-    fun testBaseParse() {
-        val lrc = "[00:01.50]Hello World"
-        val document = LrcParser.parse(lrc)
+    @DisplayName("样本：行时间、文本、结束时间与增强解析器一致")
+    fun parsesSampleConsistentlyWithEnhance() {
+        val raw = readResource("易燃易爆炸.lrc")
+        val plain = LrcParser.parse(raw)
+        val enhanced = EnhanceLrcParser.parse(raw)
 
-        assertEquals(1, document.lines.size)
-        val line = document.lines[0]
-        assertEquals(1500L, line.begin)
-        assertEquals("Hello World", line.text)
+        assertEquals(31, plain.lines.size)
+        assertEquals(enhanced.lines.size, plain.lines.size)
+
+        plain.lines.zip(enhanced.lines).forEachIndexed { index, (actual, expected) ->
+            assertEquals(expected.begin, actual.begin, "第 $index 行 begin 不一致")
+            assertEquals(expected.end, actual.end, "第 $index 行 end 不一致")
+            assertEquals(expected.text, actual.text, "第 $index 行文本不一致")
+        }
+
+        val first = plain.lines.first()
+        assertEquals(0L, first.begin)
+        assertEquals("陈粒 - 易燃易爆炸", first.text)
+
+        val last = plain.lines.last()
+        assertEquals(162054L, last.begin)
+        assertEquals(167054L, last.end)
+        assertEquals(5000L, last.duration)
     }
 
     @Test
-    @DisplayName("测试核心优化：修复歌词正文包含中括号时的截断异常")
-    fun testBracketsInContent() {
-        // 模拟网易云等平台常见的带中括号补充信息的歌词
-        val lrc = "[00:10.00] [和声] 这是一个测试 [歌词中括号]"
-        val document = LrcParser.parse(lrc)
+    @DisplayName("时间轴：有序、相邻行首尾相接、时长自洽")
+    fun keepsTimelineConsistent() {
+        val lines = LrcParser.parse(readResource("易燃易爆炸.lrc")).lines
 
-        assertEquals(1, document.lines.size)
-        // 关键：验证 lastTagEnd 之后的全部内容被保留，且没有被错误截断
-        assertEquals("[和声] 这是一个测试 [歌词中括号]", document.lines[0].text)
-    }
-
-    @Test
-    @DisplayName("测试多时间标签：同一行歌词对应多个时间点")
-    fun testMultiTagPerLine() {
-        val lrc = "[00:01.00][00:05.00]重复的歌词"
-        val document = LrcParser.parse(lrc)
-
-        // 应该解析为两条 LyricLine
-        assertEquals(2, document.lines.size)
-        assertEquals(1000L, document.lines[0].begin)
-        assertEquals(5000L, document.lines[1].begin)
-        assertEquals("重复的歌词", document.lines[0].text)
-        assertEquals("重复的歌词", document.lines[1].text)
-    }
-
-    @Test
-    @DisplayName("测试元数据提取：解析 [ar:xxx] 等标签")
-    fun testMetaExtraction() {
-        val lrc = """
-            [ar: Artist Name]
-            [ti: Song Title]
-            [offset: 500]
-            [00:01.00]Lyrics
-        """.trimIndent()
-
-        val document = LrcParser.parse(lrc)
-
-        assertEquals("Artist Name", document.metadata["ar"])
-        assertEquals("Song Title", document.metadata["ti"])
-        // offset 500ms 应该应用到歌词时间轴上 (1000 + 500 = 1500)
-        assertEquals(1500L, document.lines[0].begin)
-    }
-
-    @Test
-    @DisplayName("测试时间戳容错：支持不同的毫秒位数")
-    fun testTimeFormatAdaptation() {
-        val lrc = """
-            [00:01.5] 一位毫秒
-            [00:02.50] 两位毫秒
-            [00:03.500] 三位毫秒
-        """.trimIndent()
-
-        val document = LrcParser.parse(lrc)
-
-        assertEquals(1500L, document.lines[0].begin)
-        assertEquals(2500L, document.lines[1].begin)
-        assertEquals(3500L, document.lines[2].begin)
-    }
-
-    @Test
-    @DisplayName("测试边界情况：空字符串与非法行")
-    fun testEdgeCases() {
-        assertNotNull(LrcParser.parse(null))
-        assertNotNull(LrcParser.parse(""))
-
-        val invalidLrc = "这是一行没有标签的纯文本\n[invalid]标签格式错误"
-        val document = LrcParser.parse(invalidLrc)
-        assertTrue(document.lines.isEmpty())
-    }
-
-    @Test
-    @DisplayName("测试持续时间计算：修正末行结束时间")
-    fun testDurationAndFinalize() {
-        val lrc = "[00:01.00]第一句"
-        val totalDuration = 10000L // 10秒
-        val document = LrcParser.parse(lrc, totalDuration)
-
-        val line = document.lines[0]
-        assertEquals(1000L, line.begin)
-        assertEquals(10000L, line.end)
-        assertEquals(9000L, line.duration)
-    }
-
-    @Test
-    @DisplayName("测试解析罗马音歌词：时间轴不得丢失或重叠")
-    fun testParseRomaLyrics() {
-        val lrc =
-            "[00:00.850]\n[00:01.000]tsu yo ku na re ru ri yu u wo shi tta bo ku wo tsu re te su su me\n[00:18.570]do ro da ra ke no so u ma to u ni yo u ko wa ba ru ko ko ro\n[00:25.760]fu ru e ru te wa tsu ka mi ta i mo no ga a ru so re da ke sa\n[00:32.800]yo ru no ni o i ni\n[00:36.260]so ra ni ra n de mo\n[00:39.650]ka wa tte i ke ru no wa ji bu n ji shi n da ke so re da ke sa\n[00:46.940]tsu yo ku na re ru ri yu u wo shi tta bo ku wo tsu re te su su me\n[00:59.850]do u shi ta tte!\n[01:01.320]ke se na i yu me mo to ma re na i i ma mo\n[01:04.750]da re ka no ta me ni tsu yo ku na re ru na ra\n[01:09.160]a ri ga to u ka na shi mi yo\n[01:13.990]se ka i ni u chi no me sa re te ma ke ru i mi wo shi tta\n[01:19.030]gu re n no ha na yo sa ki ho ko re! u n me i wo te ra shi te\n[01:33.190]i na bi ka ri no za tsu o n ga mi mi wo sa su to ma do u ko ko ro\n[01:40.550]ya sa shi i da ke ja ma mo re na i mo no ga a ru? wa ka tte ru ke do\n[01:47.610]su i me n ka de ka ra ma ru ze n'a ku su ke te mi e ru gi ze n ni te n ba tsu\n[01:51.410]\n[01:52.970]\n[01:54.660]i tsu za i no ha na yo ri i do mi tsu zu ke sa i ta i chi ri n ga u tsu ku shi i\n[02:00.410]ra n bo u ni shi ki tsu me ra re ta to ge da ra ke no mi chi mo\n[02:05.170]ho n ki no bo ku da ke ni a ra wa re ru ka ra no ri ko e te mi se ru yo\n[02:14.390]ka n ta n ni ka ta zu ke ra re ta ma mo re na ka tta yu me mo\n[02:19.400]gu re n no shi n zo u ni ne wo ha ya shi ko no chi ni ya do tte ru\n[02:41.170]hi to shi re zu ha ka na i chi ri yu ku ke tsu ma tsu\n[02:48.350]mu jo u ni ya bu re ta hi me i no ka ze fu ku\n[02:55.670]da re ka no wa ra u ka ge da re ka no na ki go e\n[03:02.160]da re mo ga shi a wa se wo ne ga tte ru\n[03:07.820]do u shi ta tte!\n[03:09.270]ke se na i yu me mo to ma re na i i ma mo\n[03:12.680]da re ka no ta me ni tsu yo ku na re ru na ra\n[03:17.140]a ri ga to u ka na shi mi yo\n[03:22.120]se ka i ni u chi no me sa re te ma ke ru i mi wo shi tta\n[03:26.970]gu re n no ha na yo sa ki ho ko re! u n me i wo te ra shi te"
-
-        val document = LrcParser.parse(lrc)
-        val lines = document.lines
-
-        // 罗马音歌词：纯英文/空格正文不得被丢弃，时间轴必须自洽且正文不被标签污染
-        assertTrue(lines.size > 10, "罗马音歌词解析出的行数异常: ${lines.size}")
         lines.forEach { line ->
-            assertTrue(line.duration > 0, "存在零时长行: $line")
-            assertFalse(
-                line.text?.contains("]") == true,
-                "正文残留时间标签，说明发生了截断异常: $line"
-            )
+            assertTrue(line.begin >= 0)
+            assertTrue(line.end >= line.begin)
+            assertEquals(line.end - line.begin, line.duration)
         }
         lines.zipWithNext().forEach { (previous, current) ->
-            assertTrue(previous.begin <= current.begin, "时间轴未排序")
-            assertTrue(previous.end <= current.begin, "时间轴出现重叠")
+            assertTrue(previous.begin <= current.begin)
+            if (previous.begin < current.begin) {
+                assertEquals(current.begin, previous.end)
+            }
         }
     }
+
+    @Test
+    @DisplayName("多时间标签：每个时间点生成一行")
+    fun expandsMultipleTags() {
+        val lines = LrcParser.parse("[00:10.00][00:20.00]重复的歌词").lines
+
+        assertEquals(listOf(10000L, 20000L), lines.map { it.begin })
+        assertEquals(listOf("重复的歌词", "重复的歌词"), lines.map { it.text })
+    }
+
+    @Test
+    @DisplayName("正文包含中括号：不参与标签识别")
+    fun keepsBracketsInContent() {
+        val lines = LrcParser.parse(
+            """
+            [00:32.99]【/Prologue】
+            [00:33.11]何時[人類]向天空築起了[巴別塔]
+            [01:15.54][天才]咬下了「苹果」
+            """.trimIndent()
+        ).lines
+
+        assertEquals(3, lines.size)
+        assertEquals("【/Prologue】", lines[0].text)
+        assertEquals("何時[人類]向天空築起了[巴別塔]", lines[1].text)
+        assertEquals("[天才]咬下了「苹果」", lines[2].text)
+        assertEquals(75540L, lines[2].begin)
+    }
+
+    @Test
+    @DisplayName("时间格式：毫秒位数与分隔符自适应")
+    fun adaptsTimeFormat() {
+        val digits = LrcParser.parse(
+            """
+            [00:01.5]一位
+            [00:02.50]两位
+            [00:03.500]三位
+            """.trimIndent()
+        ).lines
+        assertEquals(listOf(1500L, 2500L, 3500L), digits.map { it.begin })
+
+        val separators = LrcParser.parse(
+            """
+            [00:01:50]冒号
+            [00 02 50]空格
+            [00.03.50]点号
+            """.trimIndent()
+        ).lines
+        assertEquals(listOf(1500L, 2500L, 3500L), separators.map { it.begin })
+    }
+
+    @Test
+    @DisplayName("offset：行时间与增强解析器同步平移")
+    fun appliesOffset() {
+        val raw = """
+            [offset:1000]
+            [00:10.00]歌词
+            [00:12.00]第二行
+        """.trimIndent()
+
+        val plain = LrcParser.parse(raw)
+        val enhanced = EnhanceLrcParser.parse(raw)
+
+        assertEquals(11000L, plain.lines[0].begin)
+        assertEquals(13000L, plain.lines[0].end)
+        plain.lines.zip(enhanced.lines).forEach { (actual, expected) ->
+            assertEquals(expected.begin, actual.begin)
+            assertEquals(expected.end, actual.end)
+        }
+    }
+
+    @Test
+    @DisplayName("总时长：修正末行结束时间")
+    fun usesTotalDurationForLastLine() {
+        val line = LrcParser.parse("[00:50.00]最后一行", duration = 60000L).lines.single()
+
+        assertEquals(60000L, line.end)
+        assertEquals(10000L, line.duration)
+    }
+
+    @Test
+    @DisplayName("空输入与非法行：忽略")
+    fun ignoresBlankAndMalformedInput() {
+        assertTrue(LrcParser.parse(null).lines.isEmpty())
+        assertTrue(LrcParser.parse("").lines.isEmpty())
+
+        val lines = LrcParser.parse(
+            """
+            纯文本没有标签
+            [invalid]格式错误
+            [00:01.00]正常行
+            """.trimIndent()
+        ).lines
+        assertEquals(1, lines.size)
+        assertEquals("正常行", lines[0].text)
+    }
+
+    @Test
+    @DisplayName("空行间奏：保留空文本行")
+    fun keepsInterludeLine() {
+        val lines = LrcParser.parse("[00:00.85]\n[00:05.00]内容").lines
+
+        assertEquals(2, lines.size)
+        assertEquals("", lines[0].text)
+        assertEquals(5000L, lines[0].end)
+        assertEquals("内容", lines[1].text)
+    }
+
+    @Test
+    @DisplayName("元数据：提取 [key:value]")
+    fun parsesMetadata() {
+        val doc = LrcParser.parse(
+            """
+            [ti:测试歌曲]
+            [ar:歌手]
+            [00:10.00]第一行
+            """.trimIndent()
+        )
+
+        assertEquals("测试歌曲", doc.metadata["ti"])
+        assertEquals("歌手", doc.metadata["ar"])
+    }
+
+    @Test
+    @DisplayName("逐字标签：行文本与增强解析器一致，但不产出 words")
+    fun stripsWordTagsWithoutWords() {
+        val raw = "[00:10.00]<00:10.00>Hello <00:10.50>World"
+        val plain = LrcParser.parse(raw).lines.single()
+        val enhanced = EnhanceLrcParser.parse(raw).lines.single()
+
+        assertEquals("Hello World", plain.text)
+        assertEquals(enhanced.text, plain.text)
+        assertEquals(enhanced.begin, plain.begin)
+        assertEquals(enhanced.end, plain.end)
+        assertNull(plain.words)
+    }
+
+    @Test
+    @DisplayName("负 offset：行开始时间截断到 0")
+    fun clampsNegativeOffsetAtZero() {
+        val lines = LrcParser.parse(
+            """
+            [offset:-1500]
+            [00:01.00]甲
+            [00:02.00]乙
+            """.trimIndent()
+        ).lines
+
+        assertEquals(0L, lines[0].begin)
+        assertEquals(500L, lines[0].end)
+        assertEquals(500L, lines[1].begin)
+    }
+
+    @Test
+    @DisplayName("同一时间点：只保留首条")
+    fun keepsFirstLineForSameBegin() {
+        val lines = LrcParser.parse(
+            """
+            [00:10.00]甲
+            [00:10.00]乙
+            [00:20.00]丙
+            """.trimIndent()
+        ).lines
+
+        assertEquals(2, lines.size)
+        assertEquals("甲", lines[0].text)
+        assertEquals(10000L, lines[0].begin)
+        assertEquals(20000L, lines[0].end)
+        assertEquals(20000L, lines[1].begin)
+    }
+
+    @Test
+    @DisplayName("重复时间戳：保留首条，丢弃后续")
+    fun keepsFirstLineForDuplicateTimestamp() {
+        val lines = LrcParser.parse(
+            "[02:37.904]由我美丽 还由我贪恋着迷\n[02:37.904]xxxxxx"
+        ).lines
+
+        assertEquals(1, lines.size)
+        assertEquals("由我美丽 还由我贪恋着迷", lines.single().text)
+    }
+
+    @Test
+    @DisplayName("多时间标签与 offset 组合")
+    fun combinesMultipleTagsWithOffset() {
+        val lines = LrcParser.parse(
+            """
+            [offset:1000]
+            [00:10.00][00:20.00]重复
+            """.trimIndent()
+        ).lines
+
+        assertEquals(listOf(11000L, 21000L), lines.map { it.begin })
+        assertEquals(21000L, lines[0].end)
+        assertEquals(26000L, lines[1].end)
+    }
+
+    @Test
+    @DisplayName("总时长早于末行：回退到默认持续时长")
+    fun fallsBackWhenDurationBeforeLastLine() {
+        val line = LrcParser.parse("[00:50.00]最后一行", duration = 10000L).lines.single()
+
+        assertEquals(55000L, line.end)
+    }
+
+    @Test
+    @DisplayName("三位分钟：时间标签可解析")
+    fun parsesThreeDigitMinutes() {
+        val line = LrcParser.parse("[123:45.678]长歌曲").lines.single()
+
+        assertEquals(7425678L, line.begin)
+    }
+
+    @Test
+    @DisplayName("CRLF 与缺少末尾换行：正常解析")
+    fun handlesCrlfAndNoTrailingNewline() {
+        val lines = LrcParser.parse("[00:10.00]第一行\r\n[00:12.00]第二行").lines
+
+        assertEquals(2, lines.size)
+        assertEquals("第一行", lines[0].text)
+        assertEquals("第二行", lines[1].text)
+    }
+
+    @Test
+    @DisplayName("offset 元数据：键名大小写不敏感")
+    fun acceptsCaseInsensitiveOffset() {
+        val line = LrcParser.parse("[Offset:1000]\n[00:10.00]歌词").lines.single()
+
+        assertEquals(11000L, line.begin)
+    }
+
+    @Test
+    @DisplayName("只有时间标签：保留空文本行")
+    fun lineWithOnlyTag() {
+        val line = LrcParser.parse("[00:10.00]").lines.single()
+
+        assertEquals("", line.text)
+        assertNull(line.words)
+    }
+
+    @Test
+    @DisplayName("非法毫秒位数：整行忽略")
+    fun ignoresInvalidFractionDigits() {
+        assertTrue(LrcParser.parse("[00:10.0000]无效").lines.isEmpty())
+    }
+
+    @Test
+    @DisplayName("空白行与纯文本：忽略且不影响时间轴")
+    fun ignoresBlankAndPlainLines() {
+        val lines = LrcParser.parse("  \n纯文本\n[00:10.00]甲\n   \n[00:12.00]乙").lines
+
+        assertEquals(2, lines.size)
+        assertEquals(10000L, lines[0].begin)
+        assertEquals(12000L, lines[1].begin)
+    }
+
+    /**
+     * 读取 classpath 下的测试资源。
+     * @param name 资源文件名。
+     * @return 资源文本。
+     */
+    private fun readResource(name: String): String =
+        checkNotNull(javaClass.getResourceAsStream("/$name")) { "缺少测试资源：$name" }
+            .bufferedReader(Charsets.UTF_8)
+            .use { it.readText() }
 }

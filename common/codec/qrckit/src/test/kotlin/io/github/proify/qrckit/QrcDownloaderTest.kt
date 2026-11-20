@@ -6,16 +6,18 @@
 
 package io.github.proify.qrckit
 
-import io.github.proify.qrckit.model.ParsedLyric
+import io.github.proify.qrckit.parser.QrcDownloader
+import io.github.proify.qrckit.parser.QrcLyricResponse
+import io.github.proify.qrckit.parser.model.ParsedLyric
 import kotlin.test.Test
 
 class QrcDownloaderTest {
     @Test
     fun testDownload() {
-        val response: LyricResponse = QrcDownloader.downloadLyrics("105603406")
+        val response: QrcLyricResponse = QrcDownloader.download("105603406")
         val data: ParsedLyric = response.parsedLyric
 
-        //println(response.raw)
+        //println(response.rawXml)
 
         data.richLyricLines.forEach {
             println(it)

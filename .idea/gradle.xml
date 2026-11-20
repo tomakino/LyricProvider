@@ -31,6 +31,7 @@
             <option value="$PROJECT_DIR$/common/base/extensions-kt" />
             <option value="$PROJECT_DIR$/common/codec" />
             <option value="$PROJECT_DIR$/common/codec/amkit-download" />
+            <option value="$PROJECT_DIR$/common/codec/amkit-locale" />
             <option value="$PROJECT_DIR$/common/codec/amkit-parser" />
             <option value="$PROJECT_DIR$/common/codec/krckit" />
             <option value="$PROJECT_DIR$/common/codec/lrckit" />

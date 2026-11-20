@@ -8,7 +8,7 @@ package io.github.proify.cloudlyric.provider.qq
 
 import io.github.proify.cloudlyric.LyricsProvider
 import io.github.proify.cloudlyric.LyricsResult
-import io.github.proify.qrckit.QrcDownloader
+import io.github.proify.qrckit.parser.QrcDownloader
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.decodeFromJsonElement
@@ -45,7 +45,7 @@ class QQMusicProvider : LyricsProvider {
         //  println("QQMusicProvider: ${take.size} ,source ${searchResponse.list.size}")
         return take.mapNotNull { song ->
             try {
-                val response = QrcDownloader.downloadLyrics(song.id.toString())
+                val response = QrcDownloader.download(song.id.toString())
                 val richLyricLines = response.parsedLyric.richLyricLines
 
                 LyricsResult(

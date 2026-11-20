@@ -4,12 +4,12 @@
  * http://www.apache.org/licenses/LICENSE-2.0
  */
 
-package io.github.tomakino.amkit.parser
+package io.github.proify.amkit.parser
 
-import io.github.tomakino.amkit.parser.model.LyricsDocument
-import io.github.tomakino.amkit.parser.model.LyricsLine
-import io.github.tomakino.amkit.parser.model.LyricsText
-import io.github.tomakino.amkit.parser.model.LyricsWord
+import io.github.proify.amkit.parser.model.LyricsDocument
+import io.github.proify.amkit.parser.model.LyricsLine
+import io.github.proify.amkit.parser.model.LyricsText
+import io.github.proify.amkit.parser.model.LyricsWord
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement

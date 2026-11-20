@@ -5,32 +5,29 @@
  */
 
 plugins {
-    alias(libs.plugins.android.library)
+    id("java-library")
+    alias(libs.plugins.jetbrains.kotlin.jvm)
     alias(libs.plugins.kotlin.serialization)
 }
 
-android {
-    namespace = "io.github.tomakino.amkit.download"
+group = "io.github.tomakino"
+version = "0.1.0"
 
-    compileSdk {
-        version = release(rootProject.extra.get("compileSdkVersion") as Int)
-    }
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
 
-    defaultConfig {
-        minSdk = 27
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
+kotlin {
+    compilerOptions {
+        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
     }
 }
 
 dependencies {
-    implementation(project(":common:codec:amkit-parser"))
+    implementation(project(":common:codec:amkit-locale"))
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.serialization.json)
 
-    androidTestImplementation(libs.androidx.junit)
+    testImplementation(kotlin("test"))
 }

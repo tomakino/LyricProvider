@@ -11,113 +11,156 @@ import java.util.regex.Pattern
 
 /**
  * LRC 解析器。
- * 针对网易云等平台非标格式优化，修复了歌词文本中包含中括号时导致的截断异常。
+ * 忽略逐字时间标签，仅解析行时间轴与文本；同一时间点只保留首条。
  */
 object LrcParser {
 
-    /** 仅用于快速判断行是否包含合法时间标签 */
-    private val LINE_VALIDATOR =
-        Pattern.compile("""^\[\d{1,3}[ :.]\d{2}(?:[ :.]\d{1,3})?].*""")
+    /** 行首连续的行时间标签。 */
+    private val LINE_PREFIX = Pattern.compile("""^(?:\[\d{1,3}[ :.]\d{2}(?:[ :.]\d{1,3})?])+""")
 
-    /** 用于精确提取时间数值 */
-    private val TAG_PATTERN =
-        Pattern.compile("""\[(\d{1,3})[ :.](\d{2})(?:[ :.](\d{1,3}))?]""")
+    /** 单个行时间标签。 */
+    private val LINE_TAG = Pattern.compile("""\[(\d{1,3})[ :.](\d{2})(?:[ :.](\d{1,3}))?]""")
 
-    /** 无下一行且无歌曲总时长时，给最后一行兜底的持续时长 */
+    /** 逐字时间标签。 */
+    private val WORD_TAG = Pattern.compile("""<\d{1,3}[ :.]\d{2}(?:[ :.]\d{1,3})?>""")
+
+    /** 元数据标签。 */
+    private val META_TAG = Pattern.compile("""^\[(\w+)\s*:\s*(.*)]$""")
+
+    /** 无后继行且无总时长时，末行的持续时长（毫秒）。 */
     private const val FALLBACK_LINE_DURATION = 5000L
+
+    /** 元数据中全局偏移的键名。 */
+    private const val OFFSET_KEY = "offset"
 
     /**
      * 解析原始歌词。
-     * @param raw 原始文本。
-     * @param duration 音频总时长，用于修正末行结束时间。
+     * @param raw 原始文本；null 或空白返回空文档。
+     * @param duration 音频总时长，单位为毫秒，用于确定末行结束时间。
+     * @return 按开始时间排序的文档。
      */
     fun parse(raw: String?, duration: Long = 0): LrcDocument {
         if (raw.isNullOrBlank()) return LrcDocument()
 
-        val entries = mutableListOf<LyricLine>()
-        val meta = mutableMapOf<String, String>()
+        val metadata = mutableMapOf<String, String>()
+        val parsedLines = mutableListOf<ParsedLine>()
+        val sourceText = raw.removePrefix("\uFEFF")
 
-        raw.lineSequence().forEach { line ->
-            val trimmed = line.trim()
-            if (trimmed.isEmpty() || !trimmed.startsWith("[")) return@forEach
+        sourceText.lineSequence().forEach { source ->
+            val line = source.trimStart()
+            if (!line.startsWith("[")) return@forEach
 
-            if (LINE_VALIDATOR.matcher(trimmed).matches()) {
-                val tagMatcher = TAG_PATTERN.matcher(trimmed)
-                val tempTimes = mutableListOf<Long>()
-                var lastTagEnd = 0
-
-                // 只有处于行首且连续的时间标签才被视为时间轴
-                while (tagMatcher.find()) {
-                    if (tagMatcher.start() != lastTagEnd) {
-                        break
-                    }
-                    tempTimes.add(
-                        toMs(
-                            tagMatcher.group(1),
-                            tagMatcher.group(2),
-                            tagMatcher.group(3)
-                        )
-                    )
-                    lastTagEnd = tagMatcher.end()
-                }
-
-                // 剩余部分即为歌词正文，即使其中包含 [文本] 也不会被截断
-                val content = trimmed.substring(lastTagEnd).trim()
-
-                tempTimes.forEach { time ->
-                    entries.add(LyricLine(begin = time, text = content))
+            val prefix = LINE_PREFIX.matcher(line)
+            if (prefix.find()) {
+                val times = extractTimes(line.substring(prefix.start(), prefix.end()))
+                if (times.isNotEmpty()) {
+                    val content = line.substring(prefix.end()).trimStart()
+                    val stripped = WORD_TAG.matcher(content).replaceAll("")
+                    val text = if (stripped == content) content.trim() else stripped
+                    parsedLines += ParsedLine(times, text)
                 }
             } else {
-                parseMeta(trimmed, meta)
+                val meta = META_TAG.matcher(line.trimEnd())
+                if (meta.matches()) {
+                    metadata[meta.group(1)] = meta.group(2).trim()
+                }
             }
         }
-        return finalize(entries, meta, duration)
+
+        val offset = metadata.entries
+            .firstOrNull { it.key.equals(OFFSET_KEY, ignoreCase = true) }
+            ?.value
+            ?.toLongOrNull()
+            ?: 0L
+
+        return LrcDocument(metadata, buildLines(parsedLines, offset, duration))
     }
 
     /**
-     * 时间转毫秒。强制识别为 [分:秒:毫秒]，自适应毫秒位数。
+     * 展开行时间标签，按时间排序并推导每行结束时间。
+     * @param lines 已解析的原始行。
+     * @param offset 全局偏移毫秒数。
+     * @param totalDuration 音频总时长，毫秒。
+     * @return 按开始时间排序的歌词行。
      */
-    private fun toMs(mStr: String, sStr: String, fStr: String?): Long {
-        val m = mStr.toLongOrNull() ?: 0L
-        val s = sStr.toLongOrNull() ?: 0L
-        val ms = when (fStr?.length) {
-            1 -> fStr.toLong() * 100 // [ss:5] -> 500ms
-            2 -> fStr.toLong() * 10  // [ss:50] -> 500ms
-            3 -> fStr.toLong()       // [ss:500] -> 500ms
-            else -> 0L
-        }
-        return m * 60000 + s * 1000 + ms
-    }
+    private fun buildLines(
+        lines: List<ParsedLine>,
+        offset: Long,
+        totalDuration: Long
+    ): List<LyricLine> {
+        val pending = lines.flatMap { line ->
+            line.times.map { time ->
+                PendingLine(
+                    begin = (time + offset).coerceAtLeast(0L),
+                    text = line.text,
+                )
+            }
+        }.distinctBy { it.begin }.sortedBy { it.begin }
 
-    private fun parseMeta(line: String, meta: MutableMap<String, String>) {
-        val colon = line.indexOf(":")
-        if (colon > 1 && line.endsWith("]")) {
-            val key = line.substring(1, colon).trim()
-            val value = line.substring(colon + 1, line.length - 1).trim()
-            meta[key] = value
-        }
-    }
-
-    private fun finalize(list: List<LyricLine>, meta: Map<String, String>, dur: Long): LrcDocument {
-        val sorted = list.sortedBy { it.begin }
-
-        // 相同 begin 的行属于同一时间点：结束时间统一取"下一个更晚的时间点"，
-        // 否则同一时间戳的重复行会得到 0 时长
-        val distinctBegins = sorted.map { it.begin }.distinct()
+        val distinctBegins = pending.map { it.begin }.distinct()
         val successor = HashMap<Long, Long>(distinctBegins.size)
         distinctBegins.forEachIndexed { index, begin ->
             distinctBegins.getOrNull(index + 1)?.let { successor[begin] = it }
         }
 
-        val lines = sorted.map { cur ->
-            val end = successor[cur.begin]
-                ?: if (dur > cur.begin) dur else cur.begin + FALLBACK_LINE_DURATION
-            cur.copy(end = end, duration = end - cur.begin)
-        }
+        return pending.map { line ->
+            val end = successor[line.begin]
+                ?: if (totalDuration > line.begin) totalDuration else line.begin + FALLBACK_LINE_DURATION
+            val lineEnd = end.coerceAtLeast(line.begin)
 
-        val offset = meta["offset"]?.toLongOrNull() ?: 0L
-        return LrcDocument(meta, lines).run {
-            if (offset != 0L) applyOffset(offset) else this
+            LyricLine(
+                begin = line.begin,
+                end = lineEnd,
+                duration = lineEnd - line.begin,
+                text = line.text,
+            )
         }
     }
+
+    /**
+     * 从行首前缀中提取全部时间标签。
+     * @param prefix 仅含行时间标签的字符串。
+     * @return 按出现顺序排列的毫秒时间。
+     */
+    private fun extractTimes(prefix: String): List<Long> =
+        LINE_TAG.matcher(prefix).let { matcher ->
+            buildList {
+                while (matcher.find()) {
+                    add(toMs(matcher.group(1), matcher.group(2), matcher.group(3)))
+                }
+            }
+        }
+
+    /**
+     * 将时间标签转换为毫秒。
+     * @param minute 分钟部分。
+     * @param second 秒部分。
+     * @param fraction 毫秒部分，位数决定倍率。
+     * @return 自歌曲开始起的毫秒数。
+     */
+    private fun toMs(minute: String, second: String, fraction: String?): Long {
+        val m = minute.toLongOrNull() ?: 0L
+        val s = second.toLongOrNull() ?: 0L
+        val ms = when (fraction?.length) {
+            1 -> (fraction.toLongOrNull() ?: 0L) * 100
+            2 -> (fraction.toLongOrNull() ?: 0L) * 10
+            3 -> fraction.toLongOrNull() ?: 0L
+            else -> 0L
+        }
+        return m * 60000 + s * 1000 + ms
+    }
+
+    /**
+     * 原始行。
+     * @property times 该行的全部行时间标签，毫秒。
+     * @property text 去除逐字标签后的行文本。
+     */
+    private class ParsedLine(val times: List<Long>, val text: String)
+
+    /**
+     * 待推导结束时间的行。
+     * @property begin 行开始时间，毫秒。
+     * @property text 行文本。
+     */
+    private class PendingLine(val begin: Long, val text: String)
 }

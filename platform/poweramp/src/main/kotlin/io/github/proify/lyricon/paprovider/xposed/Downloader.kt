@@ -10,6 +10,7 @@ package io.github.proify.lyricon.paprovider.xposed
 
 import android.annotation.SuppressLint
 import io.github.proify.cloudlyric.CloudLyrics
+import io.github.proify.cloudlyric.ProviderLyrics
 import io.github.proify.cloudlyric.SearchOptions
 import io.github.proify.cloudlyric.provider.lrclib.LrcLibProvider
 import io.github.proify.cloudlyric.provider.qq.QQMusicProvider
@@ -51,4 +52,9 @@ object Downloader {
             }
         }
     }
+}
+
+interface DownloadCallback {
+    fun onDownloadFinished(metadata: TrackMetadata, response: List<ProviderLyrics>)
+    fun onDownloadFailed(metadata: TrackMetadata, e: Exception)
 }

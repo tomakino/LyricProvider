@@ -4,7 +4,7 @@
  * http://www.apache.org/licenses/LICENSE-2.0
  */
 
-package io.github.tomakino.amkit.parser
+package io.github.proify.amkit.parser
 
 import org.w3c.dom.Element
 import javax.xml.parsers.DocumentBuilderFactory

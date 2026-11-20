@@ -20,7 +20,7 @@ import io.github.proify.lyricon.lyric.model.Song
 import io.github.proify.lyricon.provider.LyriconFactory
 import io.github.proify.lyricon.provider.LyriconProvider
 import io.github.proify.lyricon.provider.ProviderLogo
-import io.github.proify.qrckit.QrcDownloader
+import io.github.proify.qrckit.parser.QrcDownloader
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -156,7 +156,7 @@ object QQMusicHD : YukiBaseHooker() {
 
         internalScope.launch {
             try {
-                val qrcResult = QrcDownloader.downloadLyrics(songId)
+                val qrcResult = QrcDownloader.download(songId)
                 val richLyrics = qrcResult.parsedLyric.richLyricLines.filterInvalidTranslation()
 
                 if (richLyrics.isNotEmpty()) {

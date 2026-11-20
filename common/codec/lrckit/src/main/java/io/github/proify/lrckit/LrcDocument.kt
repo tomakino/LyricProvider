@@ -11,30 +11,13 @@ package io.github.proify.lrckit
 import io.github.proify.lyricon.lyric.model.LyricLine
 import kotlinx.serialization.Serializable
 
+/**
+ * 标准 LRC 文档。
+ * @property metadata 元数据标签，键保留原始大小写。
+ * @property lines 按开始时间排序的歌词行。
+ */
 @Serializable
 data class LrcDocument(
     val metadata: Map<String, String> = emptyMap(),
     val lines: List<LyricLine> = emptyList()
-) {
-
-    /**
-     * 应用全局时间偏移
-     * @param offsetMs 偏移毫秒数（支持正负）
-     * @return 偏移后的新文档
-     */
-    internal fun applyOffset(offsetMs: Long): LrcDocument {
-        if (offsetMs == 0L) return this
-
-        val newLines = lines.map { line ->
-            val newBegin = (line.begin + offsetMs).coerceAtLeast(0L)
-            val newEnd = newBegin + line.duration
-
-            line.copy(
-                begin = newBegin,
-                end = newEnd,
-                duration = line.duration
-            )
-        }
-        return copy(lines = newLines)
-    }
-}
+)

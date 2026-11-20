@@ -9,25 +9,26 @@ package io.github.proify.lyricon.lxprovider.xposed
 import com.highcapable.yukihookapi.YukiHook
 import com.highcapable.yukihookapi.annotation.xposed.YukiHookLibXposedEntry
 import com.highcapable.yukihookapi.hook.xposed.YukiHookXposedModule
-import io.github.proify.lyricon.lxprovider.xposed.variant.ikunshare.IKunMusic
-import io.github.proify.lyricon.lxprovider.xposed.variant.lxnetease.LxNetease
 import io.github.proify.lyricon.lxprovider.xposed.variant.main.LXMusic
 
 @YukiHookLibXposedEntry(
     targetApiVersion = 101,
-    scope = arrayOf(
+    scope = [
         "cn.toside.music.mobile",
         "com.ikunshare.music.mobile",
         "com.lxnetease.music.mobile"
-    ),
-    staticScope = true
+    ],
+    staticScope = false
 )
 open class HookEntry : YukiHookXposedModule {
 
     override fun onHook() = YukiHook.encase {
-        loadApp("cn.toside.music.mobile", LXMusic())
-        loadApp("com.ikunshare.music.mobile", IKunMusic())
-        loadApp("com.lxnetease.music.mobile", LxNetease())
+
+        loadApp(packageName, LXMusic("$packageName.lyric.LyricModule"))
+
+//        loadApp("cn.toside.music.mobile", LXMusic())
+//        loadApp("com.ikunshare.music.mobile", IKunMusic())
+//        loadApp("com.lxnetease.music.mobile", LxNetease())
     }
 
     override fun onInit() {

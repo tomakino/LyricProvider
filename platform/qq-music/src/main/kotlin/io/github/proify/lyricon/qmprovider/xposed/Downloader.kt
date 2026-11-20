@@ -6,7 +6,7 @@
 
 package io.github.proify.lyricon.qmprovider.xposed
 
-import io.github.proify.qrckit.QrcDownloader
+import io.github.proify.qrckit.parser.QrcDownloader
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -26,7 +26,7 @@ object DownloadManager {
 
         scope.launch {
             try {
-                val response = QrcDownloader.downloadLyrics(id)
+                val response = QrcDownloader.download(id)
                 downloadCallback.onDownloadFinished(response)
             } catch (e: Exception) {
                 downloadCallback.onDownloadFailed(id, e)

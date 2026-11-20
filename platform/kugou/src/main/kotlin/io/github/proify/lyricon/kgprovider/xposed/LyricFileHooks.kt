@@ -11,8 +11,8 @@ import com.highcapable.yukihookapi.hook.log.YLog
 import com.highcapable.yukihookapi.hook.param.PackageParam
 import io.github.proify.extensions.toRichLyricLines
 import io.github.proify.lrckit.LrcParser
-import io.github.proify.lyricon.krckit.KrcDecryptor
-import io.github.proify.lyricon.krckit.KrcParser
+import io.github.proify.lyricon.krckit.decrypt.KrcDecryptor
+import io.github.proify.lyricon.krckit.parser.KrcParser
 import io.github.proify.lyricon.lyric.model.RichLyricLine
 import io.github.proify.lyricon.dexkit.DexKitSession
 import kotlinx.coroutines.CoroutineScope

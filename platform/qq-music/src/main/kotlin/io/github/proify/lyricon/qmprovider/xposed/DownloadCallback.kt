@@ -6,9 +6,9 @@
 
 package io.github.proify.lyricon.qmprovider.xposed
 
-import io.github.proify.qrckit.LyricResponse
+import io.github.proify.qrckit.parser.QrcLyricResponse
 
 interface DownloadCallback {
-    fun onDownloadFinished(response: LyricResponse)
+    fun onDownloadFinished(response: QrcLyricResponse)
     fun onDownloadFailed(id: String, e: Exception)
 }

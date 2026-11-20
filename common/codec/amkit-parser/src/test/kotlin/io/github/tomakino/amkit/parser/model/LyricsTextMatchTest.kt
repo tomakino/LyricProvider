@@ -4,7 +4,7 @@
  * http://www.apache.org/licenses/LICENSE-2.0
  */
 
-package io.github.tomakino.amkit.parser.model
+package io.github.proify.amkit.parser.model
 
 import kotlin.test.Test
 import kotlin.test.assertEquals

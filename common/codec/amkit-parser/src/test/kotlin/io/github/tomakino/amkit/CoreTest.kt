@@ -4,11 +4,11 @@
  * http://www.apache.org/licenses/LICENSE-2.0
  */
 
-package io.github.tomakino.amkit
+package io.github.proify.amkit
 
-import io.github.tomakino.amkit.parser.DisplayOptions
-import io.github.tomakino.amkit.parser.TtmlLyricsParser
-import io.github.tomakino.amkit.parser.displayLines
+import io.github.proify.amkit.parser.DisplayOptions
+import io.github.proify.amkit.parser.TtmlLyricsParser
+import io.github.proify.amkit.parser.displayLines
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse

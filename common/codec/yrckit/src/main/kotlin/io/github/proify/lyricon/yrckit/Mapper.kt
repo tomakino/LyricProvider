@@ -81,8 +81,3 @@ private fun LyricResponse.parseRomaLines(): List<LyricLine>? {
     }
     return null
 }
-
-internal fun resolveSongDuration(metadataDuration: Long?, lastLyricEnd: Long?): Long =
-    metadataDuration?.takeIf { it > 0 }
-        ?: lastLyricEnd?.takeIf { it > 0 }
-        ?: 0L
