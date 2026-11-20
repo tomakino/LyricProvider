@@ -1,10 +1,10 @@
-name: Android Multi-App Build & Release
+name: Android 多应用构建与发布
 
 on:
   workflow_dispatch:
     inputs:
       build-type:
-        description: 'Build Type'
+        description: '构建类型'
         type: choice
         options:
           - debug
@@ -14,7 +14,7 @@ on:
 
 jobs:
   build-and-release:
-    name: Build and Release Apps
+    name: 构建并归档 APK
     runs-on: ubuntu-latest
 
     timeout-minutes: 45
@@ -27,23 +27,24 @@ jobs:
 
     env:
       BUILD_TYPE: ${{ inputs.build-type || 'release' }}
+      GRADLE_TASK: ${{ (inputs.build-type || 'release') == 'release' && 'assembleRelease' || 'assembleDebug' }}
 
     steps:
-      - name: Checkout Code
+      - name: 检出代码
         uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 1
 
-      - name: Set up JDK 21
+      - name: 配置 JDK 21
         uses: actions/setup-java@v6.3.0
         with:
           distribution: 'temurin'
           java-version: '21'
 
-      - name: Make gradlew executable
+      - name: 赋予 gradlew 执行权限
         run: chmod +x ./gradlew
 
-      - name: Setup Gradle with Caching
+      - name: 配置 Gradle 缓存
         uses: gradle/actions/setup-gradle@v6.4.1
         with:
           gradle-version: wrapper
@@ -51,7 +52,7 @@ jobs:
           cache-disabled: false
           cache-cleanup: on-success
 
-      - name: Decode and Validate Keystore
+      - name: 解码并校验证书
         if: ${{ env.BUILD_TYPE == 'release' }}
         env:
           SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
@@ -60,39 +61,31 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           set -euo pipefail
-          : "${SIGNING_KEY:?Missing GitHub Secret SIGNING_KEY}"
-          : "${KEY_STORE_PASSWORD:?Missing GitHub Secret KEY_STORE_PASSWORD}"
-          : "${KEY_ALIAS:?Missing GitHub Secret ALIAS}"
-          : "${KEY_PASSWORD:?Missing GitHub Secret KEY_PASSWORD}"
+          : "${SIGNING_KEY:?缺少 GitHub Secret：SIGNING_KEY}"
+          : "${KEY_STORE_PASSWORD:?缺少 GitHub Secret：KEY_STORE_PASSWORD}"
+          : "${KEY_ALIAS:?缺少 GitHub Secret：ALIAS}"
+          : "${KEY_PASSWORD:?缺少 GitHub Secret：KEY_PASSWORD}"
 
           printf '%s' "$SIGNING_KEY" | base64 --decode > "$GITHUB_WORKSPACE/release.jks"
           test -s "$GITHUB_WORKSPACE/release.jks"
           keytool -list -keystore "$GITHUB_WORKSPACE/release.jks" \
-            -storepass "$KEY_STORE_PASSWORD" -alias "$KEY_ALIAS" >/dev/null
+            -storepass "$KEY_STORE_PASSWORD" -alias "$KEY_ALIAS" >/dev/null 2>&1
 
-      - name: Build APKs with Caching
+      - name: 构建 APK
         run: |
           set -euo pipefail
-          case "$BUILD_TYPE" in
-            release)
-              test -s "$RELEASE_STORE_FILE"
-              ./gradlew assembleRelease --build-cache --continue --stacktrace
-              ;;
-            debug)
-              ./gradlew assembleDebug --build-cache --continue --stacktrace
-              ;;
-            *)
-              echo "::error::Unsupported BUILD_TYPE: $BUILD_TYPE"
-              exit 1
-              ;;
-          esac
+          if [[ "$BUILD_TYPE" == "release" ]]; then
+            test -s "$RELEASE_STORE_FILE"
+            [[ -n "$RELEASE_STORE_PASSWORD" ]]
+          fi
+          ./gradlew "$GRADLE_TASK" --build-cache --continue --stacktrace
         env:
           RELEASE_STORE_FILE: ${{ github.workspace }}/release.jks
           RELEASE_STORE_PASSWORD: ${{ env.BUILD_TYPE == 'release' && secrets.KEY_STORE_PASSWORD || '' }}
           RELEASE_KEY_ALIAS: ${{ env.BUILD_TYPE == 'release' && secrets.ALIAS || '' }}
           RELEASE_KEY_PASSWORD: ${{ env.BUILD_TYPE == 'release' && secrets.KEY_PASSWORD || '' }}
 
-      - name: Collect APKs to flat directory
+      - name: 收集 APK 到统一目录
         if: ${{ success() }}
         run: |
           set -euo pipefail
@@ -104,7 +97,7 @@ jobs:
           )
 
           if (( ${#APK_FILES[@]} == 0 )); then
-            echo "::error::No ${BUILD_TYPE} APKs were produced."
+            echo "::error::未生成任何 ${BUILD_TYPE} APK。"
             exit 1
           fi
 
@@ -113,7 +106,7 @@ jobs:
             module="${module//\//_}"
             destination="collected-apks/${module}-$(basename "$apk")"
             if [[ -e "$destination" ]]; then
-              echo "::error::Duplicate APK destination: $destination"
+              echo "::error::APK 目标文件名重复：$destination"
               exit 1
             fi
             cp -- "$apk" "$destination"
@@ -124,10 +117,10 @@ jobs:
             sha256sum *.apk > SHA256SUMS
           )
 
-          echo "Collected files:"
+          echo "收集到的文件："
           ls -lh collected-apks/
 
-      - name: Upload APKs to Artifacts
+      - name: 上传 APK 制品
         if: ${{ success() }}
         uses: actions/upload-artifact@v7.0.2
         with:
@@ -136,9 +129,9 @@ jobs:
           if-no-files-found: error
           archive: true
           compression-level: 0
-          retention-days: 30
+          retention-days: 90
 
-      - name: Cleanup
+      - name: 清理
         if: always()
         run: |
           rm -f release.jks || true
