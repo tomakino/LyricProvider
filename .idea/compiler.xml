@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="CompilerConfiguration">
-    <bytecodeTargetLevel target="1.8">
+    <bytecodeTargetLevel target="17">
       <module name="LyricProvider.163-music" target="21" />
       <module name="LyricProvider.app" target="21" />
       <module name="LyricProvider.apple-music" target="21" />
@@ -9,6 +9,12 @@
       <module name="LyricProvider.car-provider" target="21" />
       <module name="LyricProvider.cloud-provider" target="21" />
       <module name="LyricProvider.clound-music" target="21" />
+      <module name="LyricProvider.common.codec.amkit-download" target="17" />
+      <module name="LyricProvider.common.codec.amkit-download.main" target="17" />
+      <module name="LyricProvider.common.codec.amkit-download.test" target="17" />
+      <module name="LyricProvider.common.codec.amkit-parser" target="17" />
+      <module name="LyricProvider.common.codec.amkit-parser.main" target="17" />
+      <module name="LyricProvider.common.codec.amkit-parser.test" target="17" />
       <module name="LyricProvider.common.extensions-android" target="21" />
       <module name="LyricProvider.gramophone" target="21" />
       <module name="LyricProvider.kugou-music" target="21" />

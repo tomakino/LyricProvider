@@ -10,9 +10,6 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
 }
 
-group = "io.github.tomakino"
-version = "0.1.0"
-
 java {
     sourceCompatibility = JavaVersion.VERSION_17
     targetCompatibility = JavaVersion.VERSION_17
@@ -25,8 +22,6 @@ kotlin {
 }
 
 dependencies {
-    implementation(project(":common:codec:amkit-locale"))
-
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.lyricon.lyric.model)
