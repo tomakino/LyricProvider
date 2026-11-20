@@ -45,7 +45,7 @@ object SpotifyApi {
     }
 
     /** 从宿主请求中捕获的请求头。 */
-    val capturedHeaders = ConcurrentHashMap<String, String>()
+    private val capturedHeaders = ConcurrentHashMap<String, String>()
 
     /** 发起歌词请求所需的请求头名称。 */
     val REQUIRED_HEADERS: Set<String> = setOf(
@@ -54,6 +54,10 @@ object SpotifyApi {
         "user-agent",
         "x-client-id",
     )
+
+    fun recordHeader(key: String, value: String) {
+        capturedHeaders[key] = value
+    }
 
     /**
      * 拉取指定曲目的原始歌词字节。
