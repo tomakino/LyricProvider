@@ -11,7 +11,7 @@ import android.media.session.PlaybackState
 import com.highcapable.yukihookapi.extension.kavaref.toClassOrNull
 import com.highcapable.yukihookapi.hook.entity.YukiBaseHooker
 import com.highcapable.yukihookapi.hook.log.YLog
-import de.robv.android.xposed.XposedHelpers
+import io.github.proify.extensions.android.Reflect
 import io.github.proify.lrckit.EnhanceLrcParser
 import io.github.proify.lyricon.lyric.model.Song
 import io.github.proify.lyricon.provider.LyriconFactory
@@ -277,21 +277,12 @@ object RetroMusic : YukiBaseHooker() {
         return null
     }
 
-    private fun callFileMethod(obj: Any, getter: String): File? = try {
-        XposedHelpers.callMethod(obj, getter) as? File
-    } catch (_: Throwable) {
-        null
-    }
+    private fun callFileMethod(obj: Any, getter: String): File? =
+        Reflect.callOrNull(obj, getter) as? File
 
-    private fun getString(obj: Any, getter: String): String? = try {
-        XposedHelpers.callMethod(obj, getter)?.toString()
-    } catch (_: Throwable) {
-        null
-    }
+    private fun getString(obj: Any, getter: String): String? =
+        Reflect.callOrNull(obj, getter)?.toString()
 
-    private fun getLong(obj: Any, getter: String): Long = try {
-        (XposedHelpers.callMethod(obj, getter) as? Number)?.toLong() ?: 0L
-    } catch (_: Throwable) {
-        0L
-    }
+    private fun getLong(obj: Any, getter: String): Long =
+        (Reflect.callOrNull(obj, getter) as? Number)?.toLong() ?: 0L
 }

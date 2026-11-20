@@ -10,12 +10,13 @@ import android.content.Context
 import android.media.session.PlaybackState
 import android.net.Uri
 import com.highcapable.kavaref.KavaRef.Companion.resolve
+import com.highcapable.kavaref.extension.classOf
 import com.highcapable.yukihookapi.extension.kavaref.hook
 import com.highcapable.yukihookapi.extension.kavaref.toClass
 import com.highcapable.yukihookapi.hook.entity.YukiBaseHooker
 import com.highcapable.yukihookapi.hook.log.YLog
 import com.kyant.taglib.TagLib
-import de.robv.android.xposed.XposedHelpers
+import io.github.proify.extensions.android.Reflect
 import io.github.proify.lrckit.EnhanceLrcParser
 import io.github.proify.lyricon.lyric.model.Song
 import io.github.proify.lyricon.provider.LyriconFactory
@@ -92,20 +93,20 @@ open class Gramophone(val tag: String = "GramophoneProvider") : YukiBaseHooker()
     private fun processMediaItemChange(serviceInstance: Any) {
         try {
             // 1. 获取 controller
-            val controller = XposedHelpers.getObjectField(serviceInstance, "controller") ?: return
+            val controller = Reflect.fieldOrNull(serviceInstance, "controller") ?: return
 
             // 2. 获取当前 MediaItem (androidx.media3.common.MediaItem)
-            val mediaItem = XposedHelpers.callMethod(controller, "getCurrentMediaItem") ?: return
+            val mediaItem = Reflect.callOrNull(controller, "getCurrentMediaItem") ?: return
 
             // 3. 提取元数据
-            val mediaId = XposedHelpers.getObjectField(mediaItem, "mediaId") as? String
-            val localConfig = XposedHelpers.getObjectField(mediaItem, "localConfiguration")
-            val uri = XposedHelpers.getObjectField(localConfig, "uri") as? Uri ?: return
+            val mediaId = Reflect.fieldOrNull(mediaItem, "mediaId") as? String
+            val localConfig = Reflect.fieldOrNull(mediaItem, "localConfiguration")
+            val uri = Reflect.fieldOrNull(localConfig, "uri") as? Uri ?: return
 
-            val metadata = XposedHelpers.getObjectField(mediaItem, "mediaMetadata")
-            val title = XposedHelpers.getObjectField(metadata, "title")?.toString()
-            val artist = XposedHelpers.getObjectField(metadata, "artist")?.toString()
-            val durationMs = XposedHelpers.getObjectField(metadata, "durationMs") as? Long ?: 0L
+            val metadata = Reflect.fieldOrNull(mediaItem, "mediaMetadata")
+            val title = Reflect.fieldOrNull(metadata, "title")?.toString()
+            val artist = Reflect.fieldOrNull(metadata, "artist")?.toString()
+            val durationMs = Reflect.fieldOrNull(metadata, "durationMs") as? Long ?: 0L
 
             // 4. 触发异步解析
             executeAsyncTrackUpdate(uri, title, artist, durationMs, mediaId)
@@ -202,7 +203,7 @@ open class Gramophone(val tag: String = "GramophoneProvider") : YukiBaseHooker()
         "android.media.session.MediaSession".toClass().resolve().apply {
             firstMethod {
                 name = "setPlaybackState"
-                parameters(PlaybackState::class.java)
+                parameters(classOf<PlaybackState>())
             }.hook {
                 after {
                     val state = args[0] as? PlaybackState

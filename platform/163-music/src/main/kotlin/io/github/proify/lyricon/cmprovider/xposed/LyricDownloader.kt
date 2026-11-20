@@ -15,48 +15,37 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import java.util.concurrent.ConcurrentHashMap
 
-object LyricDownloader {
-    private val activeIds = ConcurrentHashMap.newKeySet<Long>()
+/** 歌词获取：优先磁盘缓存，未命中走网络并回写。 */
+internal object LyricDownloader {
+
+    private val inFlight = ConcurrentHashMap.newKeySet<Long>()
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
-    fun download(id: Long, callback: LyricDownloadCallback) {
-        if (activeIds.contains(id)) return
+    fun download(id: Long, callback: Callback) {
+        if (!inFlight.add(id)) return
 
         scope.launch {
             try {
-                val diskCache = fromDisk(id)
-
-                val song = if (diskCache != null) {
-                    diskCache
-                } else {
-                    val song = fromNetwork(id)
-                    DiskCacheStore.put(id, song)
-                    song
+                val song = LyricDiskCache.load(id) ?: fetch(id).also {
+                    LyricDiskCache.put(id, it)
                 }
-
-                callback.onLyricDownloadFinished(id, song)
+                callback.onFinished(id, song)
             } catch (e: Exception) {
-                callback.onLyricDownloadFailed(id, e)
+                callback.onFailed(id, e)
             } finally {
-                activeIds.remove(id)
+                inFlight.remove(id)
             }
         }
     }
 
-    private fun fromDisk(id: Long): Song? = DiskCacheStore.load(id)
-
-    private fun fromNetwork(id: Long): Song {
+    private fun fetch(id: Long): Song {
         val response = YrcDownloader.fetchLyric(id)
-        val data = TrackMetadataManager.get(id)
-        val song = response.toSong(
-            data?.title,
-            data?.artist
-        )
-        return song
+        val metadata = TrackMetadataStore.get(id)
+        return response.toSong(metadata?.title, metadata?.artist)
     }
-}
 
-interface LyricDownloadCallback {
-    fun onLyricDownloadFinished(id: Long, song: Song)
-    fun onLyricDownloadFailed(id: Long, e: Exception)
+    interface Callback {
+        fun onFinished(id: Long, song: Song)
+        fun onFailed(id: Long, e: Exception)
+    }
 }

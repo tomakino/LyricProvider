@@ -51,7 +51,6 @@ object LyricsMapper {
                 duration = (end - begin).coerceAtLeast(0L)
                 text = display.text
                 words = display.words
-                    .filter { it.start != null }
                     .map { it.toLyricWord() }
                     .toMutableList()
                 secondary = display.background

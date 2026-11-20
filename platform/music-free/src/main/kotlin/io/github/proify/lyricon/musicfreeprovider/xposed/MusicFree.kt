@@ -10,13 +10,13 @@ import android.media.session.PlaybackState
 import android.view.View
 import android.widget.TextView
 import com.highcapable.kavaref.KavaRef.Companion.resolve
+import com.highcapable.kavaref.extension.classOf
 import com.highcapable.yukihookapi.extension.kavaref.hook
 import com.highcapable.yukihookapi.extension.kavaref.toClass
 import com.highcapable.yukihookapi.hook.entity.YukiBaseHooker
 import com.highcapable.yukihookapi.hook.log.YLog
-import de.robv.android.xposed.XC_MethodHook
-import de.robv.android.xposed.XposedHelpers
 import io.github.proify.extensions.android.AndroidUtils
+import io.github.proify.extensions.android.Reflect
 import io.github.proify.lyricon.provider.LyriconFactory
 import io.github.proify.lyricon.provider.LyriconProvider
 import io.github.proify.lyricon.provider.ProviderLogo
@@ -38,22 +38,21 @@ open class MusicFree(val tag: String = "MusicFreeProvider") : YukiBaseHooker() {
     }
 
     private fun hook() {
-        XposedHelpers.findAndHookMethod(
-            "fun.upup.musicfree.lyricUtil.LyricView".toClass(),
-            "setText",
-            String::class.java,
-            object : XC_MethodHook() {
-                @Throws(Throwable::class)
-                override fun afterHookedMethod(param: MethodHookParam) {
-                    val ts = XposedHelpers.getObjectField(param.thisObject, "tv") as TextView
+        "fun.upup.musicfree.lyricUtil.LyricView".toClass().resolve()
+            .firstMethod {
+                name = "setText"
+                parameters(classOf<String>())
+            }
+            .hook {
+                after {
+                    val ts = Reflect.fieldOrNull(instance, "tv") as? TextView ?: return@after
 
-                    val rootView = ts.getRootView() ?: return
+                    val rootView = ts.getRootView() ?: return@after
                     rootView.visibility = View.GONE
                     rootView.setAlpha(0f)
 
-                    val text = param.args[0] as CharSequence
-
-                    if (text.isBlank()) return
+                    val text = args[0] as? CharSequence ?: return@after
+                    if (text.isBlank()) return@after
 
                     val newText = text.lines().mapNotNull {
                         if (it.trim() == "//") null else it
@@ -61,7 +60,7 @@ open class MusicFree(val tag: String = "MusicFreeProvider") : YukiBaseHooker() {
 
                     provider?.player?.sendText(newText)
                 }
-            })
+            }
     }
 
     private fun initProvider() {
@@ -81,7 +80,7 @@ open class MusicFree(val tag: String = "MusicFreeProvider") : YukiBaseHooker() {
         "android.media.session.MediaSession".toClass().resolve().apply {
             firstMethod {
                 name = "setPlaybackState"
-                parameters(PlaybackState::class.java)
+                parameters(classOf<PlaybackState>())
             }.hook {
                 after {
                     val state = args[0] as? PlaybackState

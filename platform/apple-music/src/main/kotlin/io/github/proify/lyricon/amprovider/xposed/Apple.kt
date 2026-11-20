@@ -15,9 +15,9 @@ import io.github.proify.lyricon.amprovider.xposed.cache.LyricsCache
 import io.github.proify.lyricon.amprovider.xposed.cache.MediaMetadataCache
 import io.github.proify.lyricon.amprovider.xposed.hook.PlaybackSink
 import io.github.proify.lyricon.amprovider.xposed.hook.installPlaybackHooks
-import io.github.proify.lyricon.amprovider.xposed.hook.installPreferenceHooks
 import io.github.proify.lyricon.amprovider.xposed.lyrics.AmkitLyricsSource
 import io.github.proify.lyricon.amprovider.xposed.lyrics.CredentialsStore
+import io.github.proify.lyricon.amprovider.xposed.preferences.PreferencesMonitor
 import io.github.proify.lyricon.amprovider.xposed.playback.PlaybackManager
 import io.github.proify.lyricon.amprovider.xposed.util.DebugLog
 import io.github.proify.lyricon.amprovider.xposed.util.callMethodOrNull
@@ -36,6 +36,7 @@ object Apple : YukiBaseHooker() {
     private lateinit var application: Application
     private lateinit var classLoader: ClassLoader
     private var provider: LyriconProvider? = null
+    private var translationPreferences: PreferencesMonitor? = null
 
     private val state = SessionState()
 
@@ -75,15 +76,12 @@ object Apple : YukiBaseHooker() {
         classLoader = hostClassLoader ?: return
 
         installSafely("DebugLog") { DebugLog.initialize(application) }
-        installSafely("PreferencesMonitor") { PreferencesMonitor.initialize(application) }
         installSafely("LyricsCache") { LyricsCache.initialize(application) }
         installSafely("CredentialsStore") { CredentialsStore.initialize(application) }
 
-        PreferencesMonitor.listener = object : PreferencesMonitor.Listener {
-            override fun onTranslationSelectedChanged(selected: Boolean) {
-                provider?.player?.setDisplayTranslation(selected)
-            }
-        }
+        translationPreferences = PreferencesMonitor(application, classLoader) { selected ->
+            provider?.player?.setDisplayTranslation(selected)
+        }.also { it.start() }
 
         initScreenStateMonitor()
         registerProvider()
@@ -103,14 +101,13 @@ object Apple : YukiBaseHooker() {
             source = AmkitLyricsSource(),
             coroutineScope = scope,
         )
-        helper.player.setDisplayTranslation(PreferencesMonitor.resolveDisplayTranslation())
+        helper.player.setDisplayTranslation(translationPreferences?.displayTranslation ?: false)
         helper.register()
         provider = helper
     }
 
     private fun installHooks() {
         installSafely("playback") { installPlaybackHooks(classLoader, state, sink) }
-        installSafely("preferences") { installPreferenceHooks(classLoader) }
     }
 
     private fun readCurrentMetadata(): MediaMetadataCache.Metadata? {

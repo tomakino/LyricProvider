@@ -6,10 +6,8 @@
 
 package io.github.proify.lyricon.bodianprovider.xposed
 
-import com.highcapable.kavaref.extension.classOf
 import com.highcapable.yukihookapi.hook.log.YLog
-import de.robv.android.xposed.XC_MethodHook
-import de.robv.android.xposed.XposedHelpers
+import com.highcapable.yukihookapi.hook.param.PackageParam
 
 /**
  * Dart → 原生 的歌词投递拦截。
@@ -43,37 +41,35 @@ object FlutterLyricBridge {
         fun onLyricDelivered(rid: String?, lyricPath: String, lyricStatus: Int?, isMv: Boolean)
     }
 
-    fun install(classLoader: ClassLoader?, listener: Listener) {
+    fun install(param: PackageParam, classLoader: ClassLoader?, listener: Listener) {
         if (classLoader == null) return
         runCatching {
-            XposedHelpers.findAndHookConstructor(
-                CLASS_METHOD_CALL,
-                classLoader,
-                classOf<String>(),
-                classOf<Any>(),
-                object : XC_MethodHook() {
-                    override fun afterHookedMethod(param: MethodHookParam) {
-                        val arguments = param.args.getOrNull(1) as? Map<*, *> ?: return
-                        if (!arguments.containsKey(KEY_LYRIC_PATH)) return
+            param.run {
+                Class.forName(CLASS_METHOD_CALL, false, classLoader)
+                    .getDeclaredConstructor(String::class.java, Any::class.java)
+                    .hook {
+                        after {
+                            val arguments = args.getOrNull(1) as? Map<*, *> ?: return@after
+                            if (!arguments.containsKey(KEY_LYRIC_PATH)) return@after
 
-                        val path = arguments[KEY_LYRIC_PATH] as? String
-                        if (path.isNullOrBlank()) return
+                            val path = arguments[KEY_LYRIC_PATH] as? String
+                            if (path.isNullOrBlank()) return@after
 
-                        val rid = arguments[KEY_RID] as? String
-                        val status = (arguments[KEY_LYRIC_STATUS] as? Number)?.toInt()
-                        val isMv = arguments[KEY_IS_MV] as? Boolean ?: false
+                            val rid = arguments[KEY_RID] as? String
+                            val status = (arguments[KEY_LYRIC_STATUS] as? Number)?.toInt()
+                            val isMv = arguments[KEY_IS_MV] as? Boolean ?: false
 
-                        YLog.debug(
-                            tag = TAG,
-                            msg = "lyric delivered: method=${param.args.getOrNull(0)}, " +
-                                    "rid=$rid, status=$status, isMv=$isMv, path=$path"
-                        )
+                            YLog.debug(
+                                tag = TAG,
+                                msg = "lyric delivered: method=${args.getOrNull(0)}, " +
+                                        "rid=$rid, status=$status, isMv=$isMv, path=$path"
+                            )
 
-                        runCatching { listener.onLyricDelivered(rid, path, status, isMv) }
-                            .onFailure { YLog.error(tag = TAG, msg = "listener failed", e = it) }
+                            runCatching { listener.onLyricDelivered(rid, path, status, isMv) }
+                                .onFailure { YLog.error(tag = TAG, msg = "listener failed", e = it) }
+                        }
                     }
-                }
-            )
+            }
             YLog.debug(tag = TAG, msg = "MethodCall hook installed")
         }.onFailure {
             YLog.error(tag = TAG, msg = "MethodCall hook failed", e = it)

@@ -17,14 +17,10 @@ internal interface DeveloperTokenReader {
 internal object DeveloperTokenReaders {
     fun create(versionCode: Int): DeveloperTokenReader = when {
         versionCode <= VERSION_512 -> V512Impl()
-        versionCode <= VERSION_652 -> V652Impl()
-        versionCode <= VERSION_700 -> V652Impl()
-
+        versionCode < VERSION_700 -> V652Impl()
         else -> V700Impl()
     }
 
     private const val VERSION_512 = 1518
-    private const val VERSION_652 = 1586
     private const val VERSION_700 = 1614
-
 }

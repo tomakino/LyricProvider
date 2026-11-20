@@ -25,29 +25,57 @@ internal object DataStoreTokenReader {
     private const val PREF_IV = "__iv"
     private const val WIRE_LENGTH = 2
 
-    fun read(context: Context): String? = runCatching {
-        val key = loadKeyStoreKey()
-        val entries = parseDataStore(File(context.filesDir, TOKENS_FILE).readBytes())
-        val cipher = entries[API_TOKEN_KEY + PREF_CIPHER] ?: return null
-        val iv = entries[API_TOKEN_KEY + PREF_IV] ?: return null
+    fun read(context: Context): String? {
+        val file = File(context.filesDir, TOKENS_FILE)
+        if (!file.isFile) {
+            DebugLog.log("Credentials", "$TOKENS_FILE 不存在")
+            return null
+        }
 
-        val c = Cipher.getInstance("AES/GCM/NoPadding")
-        c.init(
-            Cipher.DECRYPT_MODE,
-            key,
-            GCMParameterSpec(128, android.util.Base64.decode(iv, 0)),
-        )
-        String(c.doFinal(android.util.Base64.decode(cipher, 0)), Charsets.UTF_8)
-    }.getOrElse {
-        DebugLog.error("Credentials", "解密 developerToken 失败", it)
-        null
+        val key = loadKeyStoreKey() ?: run {
+            DebugLog.log("Credentials", "KeyStore 缺少 $TOKEN_STORE_KEY")
+            return null
+        }
+
+        val bytes = runCatching { file.readBytes() }.getOrElse {
+            DebugLog.error("Credentials", "读取 $TOKENS_FILE 失败", it)
+            return null
+        }
+        val entries = runCatching { parseDataStore(bytes) }.getOrElse {
+            DebugLog.error("Credentials", "解析 $TOKENS_FILE 失败", it)
+            return null
+        }
+
+        val cipher = entries[API_TOKEN_KEY + PREF_CIPHER] ?: run {
+            DebugLog.log("Credentials", "$TOKENS_FILE 缺少 ${API_TOKEN_KEY}__cipher")
+            return null
+        }
+        val iv = entries[API_TOKEN_KEY + PREF_IV] ?: run {
+            DebugLog.log("Credentials", "$TOKENS_FILE 缺少 ${API_TOKEN_KEY}__iv")
+            return null
+        }
+
+        return runCatching {
+            val c = Cipher.getInstance("AES/GCM/NoPadding")
+            c.init(
+                Cipher.DECRYPT_MODE,
+                key,
+                GCMParameterSpec(128, android.util.Base64.decode(iv, 0)),
+            )
+            String(c.doFinal(android.util.Base64.decode(cipher, 0)), Charsets.UTF_8)
+        }.getOrElse {
+            DebugLog.error("Credentials", "解密 developerToken 失败", it)
+            null
+        }
     }
 
-    private fun loadKeyStoreKey(): SecretKey {
+    private fun loadKeyStoreKey(): SecretKey? = runCatching {
         val keyStore = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
         val entry = keyStore.getEntry(TOKEN_STORE_KEY, null)
-        if (entry is KeyStore.SecretKeyEntry) return entry.secretKey
-        error("missing " + TOKEN_STORE_KEY)
+        (entry as? KeyStore.SecretKeyEntry)?.secretKey
+    }.getOrElse {
+        DebugLog.error("Credentials", "读取 KeyStore $TOKEN_STORE_KEY 失败", it)
+        null
     }
 
     /** 解析 DataStore protobuf：entry{ key:1:string, value:2:message{ 5:string } }。 */
@@ -123,7 +151,7 @@ internal object DataStoreTokenReader {
             0 -> readVarint(buffer)
             1 -> buffer.position(buffer.position() + 8)
             5 -> buffer.position(buffer.position() + 4)
-            else -> error("unsupported wire " + wire)
+            else -> error("unsupported wire $wire")
         }
     }
 }

@@ -10,8 +10,10 @@ espressoCore = "3.7.0"
 kotlinxCoroutinesCore = "1.11.0"
 material = "1.14.0"
 okhttp = "5.5.1"
-provider = "0.1.70"
-provider-model = "0.1.70"
+
+provider = "0.1.85"
+provider-model = "0.1.85"
+
 taglib = "1.0.6"
 libxposed = "102.0.0"
 yukihook = "1.5.0"

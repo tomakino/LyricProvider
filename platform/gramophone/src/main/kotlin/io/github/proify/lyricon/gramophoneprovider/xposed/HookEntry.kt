@@ -12,7 +12,7 @@ import com.highcapable.yukihookapi.hook.xposed.YukiHookXposedModule
 
 @YukiHookLibXposedEntry(
     targetApiVersion = 101,
-    scope = arrayOf("org.akanework.gramophone"),
+    scope = ["org.akanework.gramophone"],
     staticScope = true
 )
 open class HookEntry : YukiHookXposedModule {

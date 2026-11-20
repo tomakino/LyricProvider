@@ -77,7 +77,7 @@ object Bodian : YukiBaseHooker() {
                 if (BuildConfig.DEBUG) LyricSource.dumpLyricDir()
 
                 // 放在 Application 创建之后：此时 Flutter 引擎的 dex 一定可加载
-                FlutterLyricBridge.install(classLoader) { rid, path, status, isMv ->
+                FlutterLyricBridge.install(Bodian, classLoader) { rid, path, status, isMv ->
                     onLyricDelivered(rid, path, status, isMv)
                 }
             }

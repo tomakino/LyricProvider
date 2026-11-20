@@ -9,54 +9,62 @@ package io.github.proify.lyricon.cmprovider.xposed
 import android.content.SharedPreferences
 import com.highcapable.kavaref.extension.classOf
 import com.highcapable.yukihookapi.hook.log.YLog
-import io.github.proify.lyricon.cmprovider.xposed.Constants.NETEASE_MUSIC_PACKAGE_NAME
+import io.github.proify.lyricon.cmprovider.xposed.ProviderConfig.NETEASE_MUSIC_PACKAGE_NAME
 import io.github.proify.lyricon.dexkit.DexKitSession
 import org.luckypray.dexkit.wrap.DexMethod
 import java.lang.reflect.Modifier
 import kotlin.system.measureTimeMillis
 
-class PreferencesMonitor(
-    private val dexkit: DexKitSession,
+/** 定位并监听宿主的歌词显示偏好。 */
+internal class PreferencesMonitor(
+    dexkit: DexKitSession,
     private val hostPackageName: String,
-    private val callback: PreferenceCallback,
+    private val callback: (Int) -> Unit,
 ) {
 
-    private val getPreferenceDexMethod: DexMethod?
+    private val preferenceMethod: DexMethod?
     private var preferences: SharedPreferences? = null
+    private var boundClassLoader: ClassLoader? = null
 
-    private var classLoader: ClassLoader? = null
-    private var lastClassLoader: ClassLoader? = null
-
-    private val sharedPreferenceChangeListener =
+    private val preferenceListener =
         SharedPreferences.OnSharedPreferenceChangeListener { sharedPreferences, key ->
-            if (key == TRANSLATION_OPTION_KEY) {
-                notifyTranslationTypeChanged(getTranslationType(sharedPreferences))
+            if (key == PREFERENCE_KEY) {
+                callback(getTranslationType(sharedPreferences))
             }
         }
 
     init {
-        var dexMethod: DexMethod?
+        var method: DexMethod? = null
         val elapsed = measureTimeMillis {
-            dexMethod = findGetPreferenceMethod(dexkit, hostPackageName)
+            method = findPreferenceMethod(dexkit)
         }
+        preferenceMethod = method
         YLog.debug("Preference capability query completed in ${elapsed}ms")
-
-        getPreferenceDexMethod = dexMethod
     }
 
-    fun update(newClassLoader: ClassLoader) {
-        lastClassLoader = classLoader
-        classLoader = newClassLoader
-
-        val preferences = getSharedPreferences()
-        notifyTranslationTypeChanged(getTranslationType(preferences))
+    /** 绑定宿主 ClassLoader 并回调当前状态。 */
+    fun update(classLoader: ClassLoader) {
+        if (boundClassLoader != classLoader || preferences == null) {
+            bind(classLoader)
+        }
+        callback(getTranslationType(preferences))
     }
 
-    private fun findGetPreferenceMethod(
-        dexkit: DexKitSession,
-        hostPackageName: String
-    ): DexMethod? {
+    private fun bind(classLoader: ClassLoader) {
+        preferences?.unregisterOnSharedPreferenceChangeListener(preferenceListener)
+        preferences = null
+        boundClassLoader = classLoader
 
+        val method = preferenceMethod?.getMethodInstance(classLoader) ?: return
+        val resolved = runCatching { method.invoke(null) as? SharedPreferences }
+            .onFailure { YLog.error("Invoking the preference method failed", it) }
+            .getOrNull() ?: return
+
+        resolved.registerOnSharedPreferenceChangeListener(preferenceListener)
+        preferences = resolved
+    }
+
+    private fun findPreferenceMethod(dexkit: DexKitSession): DexMethod? {
         val searchPackages = listOf(
             "$hostPackageName.utils",
             "${NETEASE_MUSIC_PACKAGE_NAME}.utils"
@@ -64,68 +72,26 @@ class PreferencesMonitor(
 
         return dexkit.methodDatas {
             searchPackages(searchPackages)
-
             matcher {
                 declaredClass {
                     usingStrings(".preferences", "multiprocess_settings")
                 }
-
                 returnType(classOf<SharedPreferences>())
                 paramCount = 0
                 modifiers(Modifier.PUBLIC or Modifier.STATIC)
                 usingStrings(".preferences")
             }
-
         }.singleOrNull()
     }
 
-    private fun getSharedPreferences(): SharedPreferences? {
-        val classLoader = this.classLoader
-
-        if (classLoader != null && lastClassLoader != classLoader) {
-            preferences?.unregisterOnSharedPreferenceChangeListener(sharedPreferenceChangeListener)
-            preferences = null
-
-            val dexMethod: DexMethod? = getPreferenceDexMethod
-            val method = dexMethod?.getMethodInstance(classLoader)
-
-            val newPreferences = try {
-                method?.invoke(null) as? SharedPreferences
-            } catch (e: Throwable) {
-                YLog.error("Invoking the preference method failed", e)
-                null
-            }
-
-            newPreferences?.registerOnSharedPreferenceChangeListener(sharedPreferenceChangeListener)
-            preferences = newPreferences
-        }
-
-        return preferences
-    }
-
-    private fun getTranslationType(
-        preference: SharedPreferences? = getSharedPreferences()
-    ): Int = try {
-        preference
-            ?.getInt(TRANSLATION_OPTION_KEY, DISABLED_TYPE)
-            ?: DISABLED_TYPE
+    private fun getTranslationType(preference: SharedPreferences?): Int = try {
+        preference?.getInt(PREFERENCE_KEY, TranslationMode.DISABLED) ?: TranslationMode.DISABLED
     } catch (e: Throwable) {
         YLog.error("Reading the translation preference failed", e)
-        DISABLED_TYPE
-    }
-
-    private fun notifyTranslationTypeChanged(type: Int) {
-        callback.onTranslationOptionChanged(type)
-    }
-
-    fun interface PreferenceCallback {
-        fun onTranslationOptionChanged(type: Int)
+        TranslationMode.DISABLED
     }
 
     private companion object {
-        const val TRANSLATION_OPTION_KEY = "showLyricSetting"
-        const val DISABLED_TYPE = -1
-        const val TRANSLATION_TYPE = 0
-        const val ROMANIZATION_TYPE = 1
+        const val PREFERENCE_KEY = "showLyricSetting"
     }
 }

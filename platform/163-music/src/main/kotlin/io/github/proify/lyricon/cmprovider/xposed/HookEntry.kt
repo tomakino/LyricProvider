@@ -9,9 +9,11 @@ package io.github.proify.lyricon.cmprovider.xposed
 import com.highcapable.yukihookapi.YukiHook
 import com.highcapable.yukihookapi.annotation.xposed.YukiHookLibXposedEntry
 import com.highcapable.yukihookapi.hook.xposed.YukiHookXposedModule
-import io.github.proify.lyricon.cmprovider.xposed.Constants.HONOR_MUSIC_PACKAGE_NAME
-import io.github.proify.lyricon.cmprovider.xposed.Constants.NETEASE_MUSIC_PACKAGE_NAME
+import io.github.proify.lyricon.cmprovider.xposed.ProviderConfig.HONOR_MUSIC_PACKAGE_NAME
+import io.github.proify.lyricon.cmprovider.xposed.ProviderConfig.LOG_TAG
+import io.github.proify.lyricon.cmprovider.xposed.ProviderConfig.NETEASE_MUSIC_PACKAGE_NAME
 
+/** NetEase Cloud Music 的 YukiHookAPI 入口。 */
 @YukiHookLibXposedEntry(
     targetApiVersion = 101,
     scope = [
@@ -24,15 +26,15 @@ class HookEntry : YukiHookXposedModule {
 
     override fun onHook() {
         YukiHook.encase {
-            loadApp(NETEASE_MUSIC_PACKAGE_NAME, CloudMusic())
-            loadApp(HONOR_MUSIC_PACKAGE_NAME, CloudMusic())
+            loadApp(NETEASE_MUSIC_PACKAGE_NAME, CloudMusicHooker())
+            loadApp(HONOR_MUSIC_PACKAGE_NAME, CloudMusicHooker())
         }
     }
 
     override fun onInit() {
         YukiHook.configure {
             logging {
-                tag = "CloudMusicProvider"
+                tag = LOG_TAG
             }
         }
     }
