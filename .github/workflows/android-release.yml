@@ -129,7 +129,8 @@ jobs:
           name: ${{ env.BUILD_TYPE }}-apks
           path: collected-apks/
           if-no-files-found: error
-          archive: false
+          archive: true
+          compression-level: 6
           retention-days: 90
 
       - name: 清理
