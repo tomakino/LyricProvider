@@ -19,7 +19,6 @@ class AndroidApplicationConventionPlugin : Plugin<Project> {
 
         val compileSdkVersion = extraInt("compileSdkVersion", 37)
         val targetSdkVersion = extraInt("targetSdkVersion", 37)
-        val moduleDir = projectDir
         val projectRef = this
 
         extensions.configure<ApplicationExtension> {
@@ -35,7 +34,7 @@ class AndroidApplicationConventionPlugin : Plugin<Project> {
 
             signingConfigs {
                 create("release") {
-                    storeFile = moduleDir.resolve(System.getenv("RELEASE_STORE_FILE") ?: "release.jks")
+                    storeFile = System.getenv("RELEASE_STORE_FILE")?.let { java.io.File(it) } ?: rootProject.file("release.jks")
                     storePassword = System.getenv("RELEASE_STORE_PASSWORD")
                     keyAlias = System.getenv("RELEASE_KEY_ALIAS")
                     keyPassword = System.getenv("RELEASE_KEY_PASSWORD")
@@ -43,9 +42,6 @@ class AndroidApplicationConventionPlugin : Plugin<Project> {
             }
 
             buildTypes {
-                getByName("debug") {
-                    signingConfig = signingConfigs.getByName("release")
-                }
                 getByName("release") {
                     signingConfig = signingConfigs.getByName("release")
                     isMinifyEnabled = true

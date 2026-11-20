@@ -9,7 +9,7 @@ on:
         options:
           - debug
           - release
-        default: debug
+        default: release
         required: true
 
 jobs:
@@ -17,17 +17,25 @@ jobs:
     name: Build and Release Apps
     runs-on: ubuntu-latest
 
+    timeout-minutes: 45
+    permissions:
+      contents: read
+
+    concurrency:
+      group: lyricprovider-${{ github.ref }}-${{ inputs.build-type || 'release' }}
+      cancel-in-progress: false
+
     env:
-      BUILD_TYPE: ${{ github.event.inputs.build-type || 'release' }}
+      BUILD_TYPE: ${{ inputs.build-type || 'release' }}
 
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7.0.1
         with:
-          fetch-depth: 0
+          fetch-depth: 1
 
       - name: Set up JDK 21
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v6.3.0
         with:
           distribution: 'temurin'
           java-version: '21'
@@ -36,47 +44,99 @@ jobs:
         run: chmod +x ./gradlew
 
       - name: Setup Gradle with Caching
-        uses: gradle/actions/setup-gradle@v3
+        uses: gradle/actions/setup-gradle@v6.4.1
         with:
           gradle-version: wrapper
-          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+          cache-read-only: ${{ github.ref != 'refs/heads/master' }}
           cache-disabled: false
+          cache-cleanup: on-success
 
-      - name: Decode Keystore
-        if: ${{ github.event.inputs.build-type == 'release' || env.BUILD_TYPE == 'release' }}
+      - name: Decode and Validate Keystore
+        if: ${{ env.BUILD_TYPE == 'release' }}
+        env:
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+          KEY_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
-          echo "${{ secrets.SIGNING_KEY }}" | base64 -d > release.jks
+          set -euo pipefail
+          : "${SIGNING_KEY:?Missing GitHub Secret SIGNING_KEY}"
+          : "${KEY_STORE_PASSWORD:?Missing GitHub Secret KEY_STORE_PASSWORD}"
+          : "${KEY_ALIAS:?Missing GitHub Secret ALIAS}"
+          : "${KEY_PASSWORD:?Missing GitHub Secret KEY_PASSWORD}"
+
+          printf '%s' "$SIGNING_KEY" | base64 --decode > "$GITHUB_WORKSPACE/release.jks"
+          test -s "$GITHUB_WORKSPACE/release.jks"
+          keytool -list -keystore "$GITHUB_WORKSPACE/release.jks" \
+            -storepass "$KEY_STORE_PASSWORD" -alias "$KEY_ALIAS" >/dev/null
 
       - name: Build APKs with Caching
         run: |
-          if [ "$BUILD_TYPE" = "release" ]; then
-            ./gradlew assembleRelease --build-cache
-          else
-            ./gradlew assembleDebug --build-cache
-          fi
+          set -euo pipefail
+          case "$BUILD_TYPE" in
+            release)
+              test -s "$RELEASE_STORE_FILE"
+              ./gradlew assembleRelease --build-cache --continue --stacktrace
+              ;;
+            debug)
+              ./gradlew assembleDebug --build-cache --continue --stacktrace
+              ;;
+            *)
+              echo "::error::Unsupported BUILD_TYPE: $BUILD_TYPE"
+              exit 1
+              ;;
+          esac
         env:
-          RELEASE_STORE_FILE: ../release.jks
-          RELEASE_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
-          RELEASE_KEY_ALIAS: ${{ secrets.ALIAS }}
-          RELEASE_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          RELEASE_STORE_FILE: ${{ github.workspace }}/release.jks
+          RELEASE_STORE_PASSWORD: ${{ env.BUILD_TYPE == 'release' && secrets.KEY_STORE_PASSWORD || '' }}
+          RELEASE_KEY_ALIAS: ${{ env.BUILD_TYPE == 'release' && secrets.ALIAS || '' }}
+          RELEASE_KEY_PASSWORD: ${{ env.BUILD_TYPE == 'release' && secrets.KEY_PASSWORD || '' }}
 
       - name: Collect APKs to flat directory
+        if: ${{ success() }}
         run: |
+          set -euo pipefail
           mkdir -p collected-apks
 
-          # 复制所有 APK 文件
-          find . -name "*.apk" -path "*/build/outputs/apk/${{ env.BUILD_TYPE }}/*" -exec cp {} collected-apks/ \;
+          mapfile -d '' APK_FILES < <(
+            find . -type f -name "*.apk" \
+              -path "*/build/outputs/apk/${BUILD_TYPE}/*" -print0
+          )
+
+          if (( ${#APK_FILES[@]} == 0 )); then
+            echo "::error::No ${BUILD_TYPE} APKs were produced."
+            exit 1
+          fi
+
+          for apk in "${APK_FILES[@]}"; do
+            module="$(awk -F/ '{for(i=1;i<=NF;i++) if($i=="build"){print $(i-2) "/" $(i-1); exit}}' <<< "$apk")"
+            module="${module//\//_}"
+            destination="collected-apks/${module}-$(basename "$apk")"
+            if [[ -e "$destination" ]]; then
+              echo "::error::Duplicate APK destination: $destination"
+              exit 1
+            fi
+            cp -- "$apk" "$destination"
+          done
+
+          (
+            cd collected-apks
+            sha256sum *.apk > SHA256SUMS
+          )
 
           echo "Collected files:"
           ls -lh collected-apks/
 
       - name: Upload APKs to Artifacts
-        uses: actions/upload-artifact@v4
+        if: ${{ success() }}
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: ${{ env.BUILD_TYPE }}-apks
           path: collected-apks/
           if-no-files-found: error
-          archive: false
+          archive: true
+          compression-level: 0
+          retention-days: 30
 
       - name: Cleanup
         if: always()

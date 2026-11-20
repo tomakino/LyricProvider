@@ -19,15 +19,12 @@ extra["targetSdkVersion"] = 37
 /**
  * 1. 注册清理任务
  */
-val cleanApks: TaskProvider<Task> = tasks.register("cleanAllApks") {
+val allApksOutputDir = layout.buildDirectory.dir("all-apks")
+
+val cleanApks: TaskProvider<Delete> = tasks.register<Delete>("cleanAllApks") {
     group = "build"
-    doFirst {
-        val outputDir = project.layout.buildDirectory.dir("all-apks").get().asFile
-        if (outputDir.exists()) {
-            outputDir.deleteRecursively()
-            println("--- [Clean] 已清理旧的 APK 导出目录 ---")
-        }
-    }
+    description = "Remove previously collected APKs."
+    delete(allApksOutputDir)
 }
 
 /**
