@@ -57,6 +57,7 @@ internal object PreferencesProto {
                     key = String(bytes, offset, valueEnd - offset, Charsets.UTF_8)
                     offset = valueEnd
                 }
+
                 2L if wire == 2 -> {
                     val length = readVarint(bytes, offset) ?: return null
                     offset = length.second
@@ -65,6 +66,7 @@ internal object PreferencesProto {
                     value = readValue(bytes, offset, valueEnd)
                     offset = valueEnd
                 }
+
                 else -> offset = skip(bytes, offset, wire) ?: return null
             }
         }

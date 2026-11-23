@@ -97,7 +97,7 @@ class SixFieldsTest {
     @Test
     fun `罗马音单词`() {
         assertEquals(
-            listOf("konnichiwa", " ", "sekai"),
+            listOf("konnichiwa ", "sekai"),
             display().transliterationWords?.map { it.text },
         )
     }

@@ -37,9 +37,12 @@ class QrcLyricResponseTest {
         val roma = "[00:00.000]ro"
         val xml = buildString {
             append("<root>")
-            append("<content><![CDATA[").append(QrcEncrypter.encrypt(lyrics)).append("]]></content>")
-            append("<contentts><![CDATA[").append(QrcEncrypter.encrypt(translation)).append("]]></contentts>")
-            append("<contentroma><![CDATA[").append(QrcEncrypter.encrypt(roma)).append("]]></contentroma>")
+            append("<content><![CDATA[").append(QrcEncrypter.encrypt(lyrics))
+                .append("]]></content>")
+            append("<contentts><![CDATA[").append(QrcEncrypter.encrypt(translation))
+                .append("]]></contentts>")
+            append("<contentroma><![CDATA[").append(QrcEncrypter.encrypt(roma))
+                .append("]]></contentroma>")
             append("</root>")
         }
 

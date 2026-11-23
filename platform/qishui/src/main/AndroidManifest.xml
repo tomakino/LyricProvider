@@ -10,8 +10,10 @@
 
         android:allowBackup="true"
         android:description="@string/xposed_description"
+        android:extractNativeLibs="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
+        android:multiArch="true"
         android:roundIcon="@mipmap/ic_launcher"
         android:supportsRtl="true"
         android:theme="@style/Theme.SaltPlayerProvider">

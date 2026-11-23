@@ -6,6 +6,7 @@
 
 package io.github.proify.amkit.download
 
+import io.github.proify.amkit.locale.SystemLyricsLocale
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -15,7 +16,6 @@ import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URI
 import java.net.URLEncoder
-import io.github.proify.amkit.locale.SystemLyricsLocale
 import java.nio.charset.Charset
 
 /**

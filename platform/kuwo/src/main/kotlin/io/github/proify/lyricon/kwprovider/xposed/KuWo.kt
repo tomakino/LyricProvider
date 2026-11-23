@@ -13,7 +13,7 @@ import com.highcapable.yukihookapi.extension.kavaref.hook
 import com.highcapable.yukihookapi.extension.kavaref.toClass
 import com.highcapable.yukihookapi.hook.entity.YukiBaseHooker
 import com.highcapable.yukihookapi.hook.log.YLog
-import io.github.proify.extensions.android.AndroidUtils
+import io.github.proify.extensions.android.BluetoothHelper
 import io.github.proify.lyricon.provider.LyriconFactory
 import io.github.proify.lyricon.provider.LyriconProvider
 import io.github.proify.lyricon.provider.ProviderLogo
@@ -22,7 +22,7 @@ open class KuWo(val tag: String = "KuWoProvider") : YukiBaseHooker() {
     private var lyriconProvider: LyriconProvider? = null
 
     override fun onHook() {
-        AndroidUtils.openBluetoothA2dpOn(hostClassLoader)
+        BluetoothHelper.openBluetoothA2dpOn(hostClassLoader)
         YLog.debug(tag = tag, msg = "进程: $processName")
 
         registerAppLifecycle(true) {

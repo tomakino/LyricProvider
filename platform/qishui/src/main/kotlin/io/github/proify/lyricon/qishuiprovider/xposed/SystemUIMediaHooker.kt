@@ -1,0 +1,159 @@
+/*
+ * Copyright 2026 Proify, Tomakino
+ * Licensed under the Apache License, Version 2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
+ */
+
+package io.github.proify.lyricon.qishuiprovider.xposed
+
+import android.content.Context
+import android.media.MediaMetadata
+import android.media.session.MediaController
+import android.media.session.MediaSession
+import android.media.session.MediaSessionManager
+import android.media.session.PlaybackState
+import android.os.Handler
+import android.os.Looper
+import com.highcapable.yukihookapi.hook.entity.YukiBaseHooker
+import com.highcapable.yukihookapi.hook.log.YLog
+import io.github.proify.lyricon.lyric.model.Song
+import io.github.proify.lyricon.provider.LyriconFactory
+import io.github.proify.lyricon.provider.LyriconProvider
+import io.github.proify.lyricon.provider.ProviderLogo
+import io.github.proify.lyricon.qishuikit.api.QishuiLyricApi
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.util.concurrent.ConcurrentHashMap
+
+object SystemUIMediaHooker : YukiBaseHooker() {
+
+    private const val TAG = "LunaSystemUI"
+    private const val TARGET_PACKAGE = "com.luna.music"
+
+    private val songCache = ConcurrentHashMap<String, Song>()
+    private val controllers = ConcurrentHashMap<MediaSession.Token, MediaController>()
+    private val handler = Handler(Looper.getMainLooper())
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    private var provider: LyriconProvider? = null
+    private var kit: QishuiLyricApi? = null
+    private var cache: LyricCache? = null
+
+    override fun onHook() {
+        registerAppLifecycle(true) {
+            onCreate {
+                val context = hostApplication ?: return@onCreate
+                init(context)
+            }
+        }
+    }
+
+    private fun init(context: Context) {
+        kit = QishuiLyricApi()
+        cache = LyricCache(context.applicationContext)
+        initProvider(context)
+        initSessionListener(context)
+    }
+
+    private fun initProvider(context: Context) {
+        provider = LyriconFactory.createProvider(
+            context = context,
+            providerPackageName = Constants.PROVIDER_PACKAGE_NAME,
+            playerPackageName = TARGET_PACKAGE,
+            logo = ProviderLogo.fromSvg(Constants.ICON),
+            processName = processName
+        ).apply {
+            player.setDisplayTranslation(true)
+            register()
+        }
+        YLog.info(tag = TAG, msg = "provider registered, process=$processName")
+    }
+
+    private fun initSessionListener(context: Context) {
+        val manager =
+            context.getSystemService(Context.MEDIA_SESSION_SERVICE) as? MediaSessionManager
+        if (manager == null) {
+            YLog.error(tag = TAG, msg = "MediaSessionManager unavailable")
+            return
+        }
+
+        val listener = MediaSessionManager.OnActiveSessionsChangedListener { list ->
+            syncControllers(list.orEmpty())
+        }
+
+        runCatching {
+            manager.addOnActiveSessionsChangedListener(listener, null)
+            syncControllers(manager.getActiveSessions(null).orEmpty())
+        }.onFailure {
+            YLog.error(tag = TAG, msg = "session listener failed: $it")
+        }
+    }
+
+    private fun syncControllers(list: List<MediaController>) {
+        val targets = list.filter { it.packageName == TARGET_PACKAGE }
+        val tokens = targets.map { it.sessionToken }.toSet()
+
+        controllers.keys.filter { it !in tokens }.forEach { token ->
+            controllers.remove(token)
+        }
+
+        targets.forEach { controller ->
+            if (controllers.containsKey(controller.sessionToken)) return@forEach
+            controllers[controller.sessionToken] = controller
+
+            controller.registerCallback(object : MediaController.Callback() {
+                override fun onMetadataChanged(metadata: MediaMetadata?) {
+                    metadata?.let { handleMetadata(it) }
+                }
+
+                override fun onPlaybackStateChanged(state: PlaybackState?) {
+                    state?.let { provider?.player?.setPlaybackState(it) }
+                }
+
+                override fun onSessionDestroyed() {
+                    controllers.remove(controller.sessionToken)
+                }
+            }, handler)
+
+            controller.metadata?.let { handleMetadata(it) }
+            controller.playbackState?.let { provider?.player?.setPlaybackState(it) }
+        }
+    }
+
+    private fun handleMetadata(metadata: MediaMetadata) {
+        val id = metadata.getString(MediaMetadata.METADATA_KEY_MEDIA_ID) ?: return
+        val title = metadata.getString(MediaMetadata.METADATA_KEY_TITLE)
+        val artist = metadata.getString(MediaMetadata.METADATA_KEY_ARTIST)
+        val duration = metadata.getLong(MediaMetadata.METADATA_KEY_DURATION)
+
+        songCache[id]?.let { cached ->
+            provider?.player?.setSong(cached)
+            return
+        }
+
+        YLog.info(tag = TAG, msg = "metadata id=$id title=$title artist=$artist")
+
+        scope.launch {
+            val lyric = cache?.load(id) ?: kit?.fetch(id)?.also { cache?.save(it) }
+            val song = lyric?.toSong()
+            withContext(Dispatchers.Main) {
+                if (song != null) {
+                    songCache[id] = song
+                    provider?.player?.setSong(song)
+                } else {
+                    provider?.player?.setSong(
+                        Song(
+                            id = id,
+                            name = title.orEmpty(),
+                            artist = artist.orEmpty(),
+                            duration = duration
+                        )
+                    )
+                }
+            }
+        }
+    }
+}

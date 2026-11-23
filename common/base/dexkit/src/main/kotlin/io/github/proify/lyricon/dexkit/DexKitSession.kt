@@ -79,11 +79,14 @@ class DexKitSession internal constructor(
         Log.w(TAG, "fields query failed", it)
     }.getOrElse { emptyList() }
 
-    fun classes(query: FindClass.() -> Unit): List<Class<*>> = classDatas(query).mapNotNull { it.toReflect() }
+    fun classes(query: FindClass.() -> Unit): List<Class<*>> =
+        classDatas(query).mapNotNull { it.toReflect() }
 
-    fun methods(query: FindMethod.() -> Unit): List<Method> = methodDatas(query).mapNotNull { it.toReflect() }
+    fun methods(query: FindMethod.() -> Unit): List<Method> =
+        methodDatas(query).mapNotNull { it.toReflect() }
 
-    fun fields(query: FindField.() -> Unit): List<Field> = fieldDatas(query).mapNotNull { it.toReflect() }
+    fun fields(query: FindField.() -> Unit): List<Field> =
+        fieldDatas(query).mapNotNull { it.toReflect() }
 
     /** 借用原始 bridge 做无缓存的后续查询或显式键读取。 */
     fun <T> withBridge(block: (DexKitBridge) -> T): T? = runCatching {

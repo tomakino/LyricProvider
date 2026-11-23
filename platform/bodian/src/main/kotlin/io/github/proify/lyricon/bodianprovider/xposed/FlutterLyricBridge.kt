@@ -66,7 +66,13 @@ object FlutterLyricBridge {
                             )
 
                             runCatching { listener.onLyricDelivered(rid, path, status, isMv) }
-                                .onFailure { YLog.error(tag = TAG, msg = "listener failed", e = it) }
+                                .onFailure {
+                                    YLog.error(
+                                        tag = TAG,
+                                        msg = "listener failed",
+                                        e = it
+                                    )
+                                }
                         }
                     }
             }

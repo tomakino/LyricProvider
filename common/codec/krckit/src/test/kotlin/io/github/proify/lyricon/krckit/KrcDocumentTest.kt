@@ -20,7 +20,8 @@ class KrcDocumentTest {
 
     @Test
     fun alignsTranslationAndRoma() {
-        val language = """{"content":[{"language":0,"lyricContent":[["ro1"],["ro2"]],"type":0},{"language":0,"lyricContent":[["译1"],["译2"]],"type":1}],"version":1}"""
+        val language =
+            """{"content":[{"language":0,"lyricContent":[["ro1"],["ro2"]],"type":0},{"language":0,"lyricContent":[["译1"],["译2"]],"type":1}],"version":1}"""
         val document = KrcDocument(
             metadata = mapOf("language" to encode(language)),
             lines = listOf(line(0, "甲"), line(1000, "乙"))
@@ -36,7 +37,8 @@ class KrcDocumentTest {
 
     @Test
     fun leavesTrackNullWhenSizeMismatches() {
-        val language = """{"content":[{"language":0,"lyricContent":[["ro1"]],"type":0}],"version":1}"""
+        val language =
+            """{"content":[{"language":0,"lyricContent":[["ro1"]],"type":0}],"version":1}"""
         val document = KrcDocument(
             metadata = mapOf("language" to encode(language)),
             lines = listOf(line(0, "甲"), line(1000, "乙"))

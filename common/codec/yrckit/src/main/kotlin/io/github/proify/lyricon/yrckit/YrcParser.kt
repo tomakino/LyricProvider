@@ -11,7 +11,7 @@ import io.github.proify.lyricon.lyric.model.LyricWord
 import java.util.regex.Pattern
 
 /**
- * YRC 解析器。
+ * 网易云音乐 YRC 解析器。
  * 解析逐行时间头与逐字时间轴；同一时间点只保留首条。
  */
 object YrcParser {

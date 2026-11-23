@@ -11,7 +11,7 @@ import io.github.proify.lyricon.lyric.model.LyricWord
 import io.github.proify.qrckit.parser.model.QrcDocument
 
 /**
- * QRC 歌词解析器。
+ * QQ音乐 QRC 歌词解析器。
  * 支持带 `LyricContent` 的 XML 与纯 QRC 文本。
  */
 object QrcParser {
@@ -21,6 +21,7 @@ object QrcParser {
 
     /** 逐字标签：文本、开始时间与持续时间。 */
     private val WORD_PATTERN = Regex("""([^()\n\r]*)\((\d+)\s*,\s*(\d+)\)""")
+
     /** 元数据标签。 */
     private val META_PATTERN = Regex("""\[(\w+)\s*:\s*([^]]*)]""")
 

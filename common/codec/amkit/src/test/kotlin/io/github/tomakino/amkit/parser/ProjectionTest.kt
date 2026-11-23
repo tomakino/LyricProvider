@@ -103,7 +103,8 @@ class ProjectionTest {
 
     @Test
     fun `音译未要求时为 null`() {
-        val line = parser.parse(plainReplacement).displayLines(DisplayOptions(language = "zh-Hans")).single()
+        val line = parser.parse(plainReplacement).displayLines(DisplayOptions(language = "zh-Hans"))
+            .single()
         assertNull(line.transliteration)
         assertNull(line.transliterationWords)
     }
@@ -126,7 +127,9 @@ class ProjectionTest {
         val document = parser.parse(plainReplacement)
 
         val first = document.displayLines(DisplayOptions(language = "zh-Hans")).single()
-        val second = document.displayLines(DisplayOptions(language = "zh-Hans", applyReplacement = false)).single()
+        val second =
+            document.displayLines(DisplayOptions(language = "zh-Hans", applyReplacement = false))
+                .single()
 
         assertEquals("你好", first.text)
         assertEquals("Hi", second.text)

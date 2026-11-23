@@ -55,8 +55,8 @@ internal abstract class TranslationSwitchFileWatcher(
             override fun onEvent(event: Int, path: String?) {
                 if (path != fileName) return
                 val changed = event and (
-                        FileObserver.MODIFY or FileObserver.CLOSE_WRITE or
-                                FileObserver.MOVED_TO or FileObserver.CREATE or FileObserver.DELETE
+                        MODIFY or CLOSE_WRITE or
+                                MOVED_TO or CREATE or DELETE
                         ) != 0
                 if (changed) scheduleReload()
             }

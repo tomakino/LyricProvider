@@ -6,10 +6,12 @@
 
 package io.github.proify.lyricon.amprovider.xposed
 
+import io.github.proify.extensions.android.Reflect
 import io.github.proify.lyricon.provider.ProviderConstants
-import io.github.proify.lyricon.provider.RemotePlayer
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -18,26 +20,25 @@ import kotlin.time.Duration.Companion.milliseconds
 /**
  * 播放进度同步。
  *
- * 屏幕熄灭时暂停轮询，亮屏或解锁后按 [playing] 恢复。
+ * 在播放期间按 [ProviderConstants.DEFAULT_POSITION_UPDATE_INTERVAL] 的间隔
+ * 读取 ExoPlayer 位置并回调。
  */
 internal class ProgressSync(
-    private val scope: CoroutineScope,
-    private val state: SessionState,
-    private val playerProvider: () -> RemotePlayer?,
+    private val callback: (Long) -> Unit,
 ) {
+    private val scope by lazy { CoroutineScope(Dispatchers.Default + SupervisorJob()) }
 
     @Volatile
     private var playing = false
 
     private var job: Job? = null
 
-    val isPlaying: Boolean
-        get() = playing
+    /** ExoPlayer 实例，由 hook 在构造完成后写入。 */
+    var exoPlayerInstance: Any? = null
 
     fun onPlaybackChanged(isPlaying: Boolean) {
         if (playing == isPlaying) return
         playing = isPlaying
-        playerProvider()?.setPlaybackState(isPlaying)
         if (isPlaying) startLoop() else stopLoop()
     }
 
@@ -57,7 +58,7 @@ internal class ProgressSync(
         if (job?.isActive == true) return
         job = scope.launch {
             while (isActive && playing) {
-                playerProvider()?.setPosition(state.readPosition())
+                callback(readPosition())
                 delay(ProviderConstants.DEFAULT_POSITION_UPDATE_INTERVAL.milliseconds)
             }
         }
@@ -67,4 +68,9 @@ internal class ProgressSync(
         job?.cancel()
         job = null
     }
+
+    /** 当前播放位置，读取失败时为 0。 */
+    fun readPosition(): Long =
+        Reflect.callOrNull(exoPlayerInstance, "getCurrentPosition") as? Long ?: 0
+
 }

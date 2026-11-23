@@ -8,14 +8,12 @@
 
 package io.github.proify.lyricon.spotifyprovider.xposed
 
-import io.github.proify.lyricon.spotifyprovider.xposed.TrackMetadata
 import io.github.proify.lyricon.spotifyprovider.xposed.api.proto.LyricsLine
 import io.github.proify.lyricon.spotifyprovider.xposed.api.proto.LyricsResponse
 import io.github.proify.lyricon.spotifyprovider.xposed.api.proto.Syllable
 import io.github.proify.lyricon.spotifyprovider.xposed.util.toLyrics
 import io.github.proify.lyricon.spotifyprovider.xposed.util.toSongOrNull
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Test
 

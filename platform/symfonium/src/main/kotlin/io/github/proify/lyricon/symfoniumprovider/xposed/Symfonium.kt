@@ -16,6 +16,7 @@ import com.highcapable.yukihookapi.extension.kavaref.toClass
 import com.highcapable.yukihookapi.hook.entity.YukiBaseHooker
 import com.highcapable.yukihookapi.hook.log.YLog
 import com.kyant.taglib.TagLib
+import io.github.proify.extensions.toRichLyricLines
 import io.github.proify.lrckit.EnhanceLrcParser
 import io.github.proify.lyricon.lyric.model.Song
 import io.github.proify.lyricon.provider.LyriconFactory
@@ -84,7 +85,7 @@ class Symfonium : YukiBaseHooker() {
                 id = id,
                 name = name,
                 artist = artist,
-                lyrics = document.lines
+                lyrics = document.lines.toRichLyricLines()
             )
         )
     }

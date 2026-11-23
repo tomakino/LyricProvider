@@ -27,7 +27,8 @@ class LyricWhitespaceTest {
     @Test
     @DisplayName("英文逐字：保留词尾空格")
     fun keepsTrailingSpaceInWord() {
-        val line = EnhanceLrcParser.parse("[00:10.00]<00:10.00>Hello <00:10.50>World").lines.single()
+        val line =
+            EnhanceLrcParser.parse("[00:10.00]<00:10.00>Hello <00:10.50>World").lines.single()
 
         assertEquals("Hello World", line.text)
         assertEquals("Hello ", line.words!![0].text)
@@ -37,7 +38,8 @@ class LyricWhitespaceTest {
     @Test
     @DisplayName("英文逐字：保留词前导空格")
     fun keepsLeadingSpaceInWord() {
-        val line = EnhanceLrcParser.parse("[00:10.00]<00:10.00>Hello<00:10.50> World").lines.single()
+        val line =
+            EnhanceLrcParser.parse("[00:10.00]<00:10.00>Hello<00:10.50> World").lines.single()
 
         assertEquals("Hello World", line.text)
         assertEquals(" World", line.words!![1].text)

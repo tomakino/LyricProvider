@@ -7,11 +7,11 @@
 
 `GET /color-lyrics/v2/track/{id}` 的响应体。
 
-| 字段 | 编号 | 类型 |
-|---|---|---|
-| lyrics | 1 | LyricsResponse |
-| colors | 2 | ColorData |
-| has_vocal_removal | 3 | bool |
+| 字段              | 编号 | 类型           |
+|-------------------|------|----------------|
+| lyrics            | 1    | LyricsResponse |
+| colors            | 2    | ColorData      |
+| has_vocal_removal | 3    | bool           |
 
 ```proto
 message ColorLyricsResponse {
@@ -23,11 +23,11 @@ message ColorLyricsResponse {
 
 ## `ColorData`
 
-| 字段 | 编号 | 类型 |
-|---|---|---|
-| background | 1 | int32 |
-| text | 2 | int32 |
-| highlight_text | 3 | int32 |
+| 字段           | 编号 | 类型  |
+|----------------|------|-------|
+| background     | 1    | int32 |
+| text           | 2    | int32 |
+| highlight_text | 3    | int32 |
 
 ```proto
 message ColorData {
@@ -39,19 +39,19 @@ message ColorData {
 
 ## `LyricsResponse`
 
-| 字段 | 编号 | 类型 |
-|---|---|---|
-| sync_type | 1 | int32（1=行同步，2=逐字） |
-| lines | 2 | repeated LyricsLine |
-| provider | 3 | string |
-| provider_lyrics_id | 4 | string |
-| provider_display_name | 5 | string |
-| sync_lyrics_uri | 7 | string |
-| alternatives | 9 | repeated Alternative |
-| language | 10 | string |
-| is_rtl_language | 11 | bool |
-| cap_status | 14 | int32 |
-| translation_languages | 19 | repeated string |
+| 字段                  | 编号 | 类型                      |
+|-----------------------|------|---------------------------|
+| sync_type             | 1    | int32（1=行同步，2=逐字） |
+| lines                 | 2    | repeated LyricsLine       |
+| provider              | 3    | string                    |
+| provider_lyrics_id    | 4    | string                    |
+| provider_display_name | 5    | string                    |
+| sync_lyrics_uri       | 7    | string                    |
+| alternatives          | 9    | repeated Alternative      |
+| language              | 10   | string                    |
+| is_rtl_language       | 11   | bool                      |
+| cap_status            | 14   | int32                     |
+| translation_languages | 19   | repeated string           |
 
 ```proto
 message LyricsResponse {
@@ -90,15 +90,15 @@ message LyricsResponse {
 
 ## v3 响应：`LyricsV3Response`
 
-| 字段 | 编号 | 类型 |
-|---|---|---|
-| sync_type | 1 | int32 |
-| lines | 2 | repeated LyricsLine |
-| preview_lines | 3 | repeated LyricsLine |
-| provider | 4 | Provider |
-| translation | 5 | Translation |
-| language | 6 | Language |
-| cap_status | 7 | int32 |
+| 字段          | 编号 | 类型                |
+|---------------|------|---------------------|
+| sync_type     | 1    | int32               |
+| lines         | 2    | repeated LyricsLine |
+| preview_lines | 3    | repeated LyricsLine |
+| provider      | 4    | Provider            |
+| translation   | 5    | Translation         |
+| language      | 6    | Language            |
+| cap_status    | 7    | int32               |
 
 ```proto
 message LyricsV3Response {
@@ -151,11 +151,11 @@ v3 与 v2 的差别：
 
 `platform/spotify/.../api/proto/ProtoModels.kt`：
 
-| 现有模型 | 对应协议 | 缺口 |
-|---|---|---|
-| `ProtoLyricResponse` | `ColorLyricsResponse` | 缺 `hasVocalRemoval` |
-| `ProtoLyricsData` | `LyricsResponse` | 缺 `language`、`isRtlLanguage`、`capStatus`、`syncLyricsUri`、`alternatives`、`translationLanguages` |
-| `ProtoLyricLine` | `LyricsLine` | 无 `endTimeMs`（协议里确实没有，靠推断） |
-| `ProtoSyllable` | `Syllable` | 多出 `endTimeMs`（协议里没有，属推断值） |
-| `ProtoColorData` | `ColorData` | 一致 |
-| — | `LyricsV3Response` | 未实现 |
+| 现有模型             | 对应协议              | 缺口                                                                                                 |
+|----------------------|-----------------------|------------------------------------------------------------------------------------------------------|
+| `ProtoLyricResponse` | `ColorLyricsResponse` | 缺 `hasVocalRemoval`                                                                                 |
+| `ProtoLyricsData`    | `LyricsResponse`      | 缺 `language`、`isRtlLanguage`、`capStatus`、`syncLyricsUri`、`alternatives`、`translationLanguages` |
+| `ProtoLyricLine`     | `LyricsLine`          | 无 `endTimeMs`（协议里确实没有，靠推断）                                                             |
+| `ProtoSyllable`      | `Syllable`            | 多出 `endTimeMs`（协议里没有，属推断值）                                                             |
+| `ProtoColorData`     | `ColorData`           | 一致                                                                                                 |
+| —                    | `LyricsV3Response`    | 未实现                                                                                               |

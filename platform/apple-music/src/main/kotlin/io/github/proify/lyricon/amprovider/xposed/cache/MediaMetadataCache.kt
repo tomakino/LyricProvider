@@ -19,8 +19,7 @@ object MediaMetadataCache {
         ): Boolean = size > MAX_SIZE
     }
 
-    /** MediaId 缺失时返回 null。 */
-    fun putAndGet(metadata: MediaMetadata): Metadata? {
+    fun put(metadata: MediaMetadata): Metadata? {
         val mediaId = metadata.getString(MediaMetadata.METADATA_KEY_MEDIA_ID)
         if (mediaId.isNullOrBlank()) return null
 
@@ -34,7 +33,7 @@ object MediaMetadataCache {
         return newMetadata
     }
 
-    fun getMetadataById(mediaId: String): Metadata? = metadataCache[mediaId]
+    fun get(mediaId: String): Metadata? = metadataCache[mediaId]
 
     @Serializable
     data class Metadata(

@@ -189,7 +189,11 @@ class LyricParserStressTest {
             val words = line.words ?: return@forEachIndexed
             if (words.isEmpty()) return@forEachIndexed
             val where = "文档 $documentIndex 第 $index 行逐字"
-            assertEquals(line.text, words.joinToString("") { it.text.orEmpty() }, "$where 文本不一致")
+            assertEquals(
+                line.text,
+                words.joinToString("") { it.text.orEmpty() },
+                "$where 文本不一致"
+            )
             assertEquals(line.end, words.last().end, "$where 末词未对齐")
             words.zipWithNext().forEach { (previous, current) ->
                 assertTrue(previous.begin <= current.begin, "$where 词未排序")

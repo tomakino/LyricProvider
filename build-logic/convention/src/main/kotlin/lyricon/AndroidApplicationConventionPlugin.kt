@@ -34,7 +34,8 @@ class AndroidApplicationConventionPlugin : Plugin<Project> {
 
             signingConfigs {
                 create("release") {
-                    storeFile = System.getenv("RELEASE_STORE_FILE")?.let { java.io.File(it) } ?: rootProject.file("release.jks")
+                    storeFile = System.getenv("RELEASE_STORE_FILE")?.let { java.io.File(it) }
+                        ?: rootProject.file("release.jks")
                     storePassword = System.getenv("RELEASE_STORE_PASSWORD")
                     keyAlias = System.getenv("RELEASE_KEY_ALIAS")
                     keyPassword = System.getenv("RELEASE_KEY_PASSWORD")

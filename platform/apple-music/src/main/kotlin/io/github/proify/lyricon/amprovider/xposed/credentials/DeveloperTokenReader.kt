@@ -15,12 +15,10 @@ internal interface DeveloperTokenReader {
 
 /** 按版本选择实现。 */
 internal object DeveloperTokenReaders {
-    fun create(versionCode: Int): DeveloperTokenReader = when {
-        versionCode <= VERSION_512 -> V512Impl()
-        versionCode < VERSION_700 -> V652Impl()
-        else -> V700Impl()
+    fun create(versionCode: Long): DeveloperTokenReader = when {
+        versionCode < VERSION_700 -> LegacyDeveloperTokenReader()
+        else -> DataStoreDeveloperTokenReader()
     }
 
-    private const val VERSION_512 = 1518
     private const val VERSION_700 = 1614
 }

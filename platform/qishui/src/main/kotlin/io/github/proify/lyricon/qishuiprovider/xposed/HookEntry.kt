@@ -12,14 +12,14 @@ import com.highcapable.yukihookapi.hook.xposed.YukiHookXposedModule
 
 @YukiHookLibXposedEntry(
     targetApiVersion = 101,
-    scope = arrayOf("com.luna.music"),
-    staticScope = true
+    scope = ["com.android.systemui"],
+    staticScope = true,
 )
 open class HookEntry : YukiHookXposedModule {
 
     override fun onHook() =
         YukiHook.encase {
-            loadApp("com.luna.music", QiShui)
+            loadApp("com.android.systemui", SystemUIMediaHooker)
         }
 
     override fun onInit() = YukiHook.configure {

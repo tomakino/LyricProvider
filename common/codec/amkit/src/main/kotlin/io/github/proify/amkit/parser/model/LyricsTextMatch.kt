@@ -25,7 +25,8 @@ internal fun List<LyricsText>.matchLanguage(
     if (candidates.isEmpty()) return null
 
     if (preferredType != null) {
-        candidates.firstOrNull { it.type.equals(preferredType, ignoreCase = true) }?.let { return it }
+        candidates.firstOrNull { it.type.equals(preferredType, ignoreCase = true) }
+            ?.let { return it }
     }
     return candidates.first()
 }

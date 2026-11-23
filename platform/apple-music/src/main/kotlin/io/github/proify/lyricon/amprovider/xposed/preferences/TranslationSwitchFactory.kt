@@ -27,6 +27,7 @@ internal object TranslationSwitchFactory {
             .getDeclaredMethod(LEGACY_SETTER, java.lang.Boolean.TYPE)
     }.isSuccess
 
-    private const val LEGACY_PREFERENCES_CLASS = "com.apple.android.music.utils.AppSharedPreferences"
+    private const val LEGACY_PREFERENCES_CLASS =
+        "com.apple.android.music.utils.AppSharedPreferences"
     private const val LEGACY_SETTER = "setLyricsTranslationSelected"
 }

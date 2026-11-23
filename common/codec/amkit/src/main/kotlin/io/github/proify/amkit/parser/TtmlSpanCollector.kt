@@ -66,8 +66,8 @@ internal fun Element.toLyricsText(
     val collector = SpanCollector()
     collector.collect(this)
 
-    // 裁剪只做一次：它会新建列表，重复调用纯属浪费
-    val words = collector.words.trimmedSeparators()
+    // 归一化只做一次：它会新建列表，重复调用纯属浪费
+    val words = collector.words.normalized()
 
     return LyricsText(
         text = words.joinToString(separator = "") { it.text },
@@ -77,7 +77,7 @@ internal fun Element.toLyricsText(
         // 两处都要认（Apple 使用前者）
         autoCreated = containerAutoCreated || plainAttribute(AUTO_CREATED_ATTRIBUTE) == "true",
         words = words,
-        background = collector.background.trimmedSeparators(),
+        background = collector.background.normalized(),
     )
 }
 
@@ -97,7 +97,7 @@ internal fun String.toSeparatorWord(): LyricsWord? {
 
     // 纯空白且不含换行 —— 这正是 Apple 真实的词间分隔形式（`</span> <span>`）。
     // 绝不能在这里做首尾修剪：那会把整个分隔符折成空串，相邻词随即粘连。
-    // 行首行尾的分隔符由词序列级别的 trimmedSeparators() 负责丢弃。
+    // 分隔符由词序列级别的 normalized() 负责合并或丢弃。
     if (isBlank()) {
         return if (contains('\n') || contains('\r')) null else LyricsWord(text = " ")
     }
@@ -127,11 +127,28 @@ internal fun String.collapseWhitespace(): String {
 internal fun LyricsWord.isSeparator(): Boolean =
     text.isBlank() && start == null && end == null
 
-/** 丢弃词序列首尾的分隔符（行首行尾的空格不属于歌词）。 */
-internal fun List<LyricsWord>.trimmedSeparators(): List<LyricsWord> {
-    var from = 0
-    var to = size
-    while (from < to && this[from].isSeparator()) from++
-    while (to > from && this[to - 1].isSeparator()) to--
-    return if (from == 0 && to == size) this else subList(from, to).toList()
+/**
+ * 归一化词序列：首尾空白丢弃，中间空白并入前一个词。
+ *
+ * 归一化后序列里只剩真正的词，每个词要么带完整时间，要么完全没有。
+ */
+internal fun List<LyricsWord>.normalized(): List<LyricsWord> {
+    if (isEmpty()) return this
+
+    val result = ArrayList<LyricsWord>(size)
+    for (word in this) {
+        if (!word.isSeparator()) {
+            result += word
+            continue
+        }
+        // 行首空白不属于歌词
+        val previous = result.lastOrNull() ?: continue
+        result[result.size - 1] = previous.copy(text = previous.text + word.text)
+    }
+
+    // 行尾空白已并入最后一个词，去掉
+    val last = result.lastOrNull() ?: return result
+    val trimmed = last.text.trimEnd()
+    if (trimmed != last.text) result[result.size - 1] = last.copy(text = trimmed)
+    return result
 }

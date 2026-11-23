@@ -34,4 +34,4 @@ data class LyricsCredentials(
 
 /** 打码：只暴露长度与首尾两位，短值直接只给长度。 */
 private fun String.masked(): String =
-    if (length <= 8) "<$length 字符>" else "${take(2)}…${takeLast(2)}（$length 字符）"
+    if (length <= 8) "<$length chars>" else "${take(2)}…${takeLast(2)}（$length chars）"

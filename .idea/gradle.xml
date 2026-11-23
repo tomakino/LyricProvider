@@ -33,6 +33,7 @@
             <option value="$PROJECT_DIR$/common/codec/amkit" />
             <option value="$PROJECT_DIR$/common/codec/krckit" />
             <option value="$PROJECT_DIR$/common/codec/lrckit" />
+            <option value="$PROJECT_DIR$/common/codec/qishuikit" />
             <option value="$PROJECT_DIR$/common/codec/qrckit" />
             <option value="$PROJECT_DIR$/common/codec/yrckit" />
             <option value="$PROJECT_DIR$/platform" />

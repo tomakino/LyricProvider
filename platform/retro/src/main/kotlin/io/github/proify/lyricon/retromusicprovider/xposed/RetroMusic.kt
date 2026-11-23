@@ -12,6 +12,7 @@ import com.highcapable.yukihookapi.extension.kavaref.toClassOrNull
 import com.highcapable.yukihookapi.hook.entity.YukiBaseHooker
 import com.highcapable.yukihookapi.hook.log.YLog
 import io.github.proify.extensions.android.Reflect
+import io.github.proify.extensions.toRichLyricLines
 import io.github.proify.lrckit.EnhanceLrcParser
 import io.github.proify.lyricon.lyric.model.Song
 import io.github.proify.lyricon.provider.LyriconFactory
@@ -208,7 +209,7 @@ object RetroMusic : YukiBaseHooker() {
                         name = title,
                         artist = artist,
                         duration = duration,
-                        lyrics = lines
+                        lyrics = lines.toRichLyricLines()
                     )
                 )
                 lastLyricsSongKey = songKey

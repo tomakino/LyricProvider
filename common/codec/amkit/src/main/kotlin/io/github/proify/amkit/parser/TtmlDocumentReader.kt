@@ -75,8 +75,8 @@ internal fun Element.toLine(): LyricsLine {
         agentId = nsAttribute(TtmlNamespaces.TTM, "agent"),
         start = start,
         end = end,
-        words = collector.words.trimmedSeparators(),
-        background = collector.background.trimmedSeparators(),
+        words = collector.words.normalized(),
+        background = collector.background.normalized(),
         translations = collector.translations,
         transliterations = collector.transliterations,
     )

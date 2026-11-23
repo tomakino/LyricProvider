@@ -9,7 +9,6 @@ package io.github.proify.lyricon.cloudprovider.xposed
 import com.highcapable.yukihookapi.YukiHook
 import com.highcapable.yukihookapi.annotation.xposed.YukiHookLibXposedEntry
 import com.highcapable.yukihookapi.hook.xposed.YukiHookXposedModule
-import io.github.proify.lyricon.cloudprovider.xposed.Constants.PROVIDER_PACKAGE_NAME
 
 @YukiHookLibXposedEntry(
     targetApiVersion = 101,
@@ -28,7 +27,7 @@ open class HookEntry : YukiHookXposedModule {
     override fun onInit() {
         YukiHook.configure {
             logging {
-                isEnable = true
+                Config.enabled = true
                 tag = "CloudProvider "
             }
         }

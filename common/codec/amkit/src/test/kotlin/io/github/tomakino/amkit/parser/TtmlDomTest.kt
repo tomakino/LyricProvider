@@ -50,7 +50,10 @@ class TtmlDomTest {
         val element = root(
             """<tt xmlns="http://www.w3.org/ns/ttml" xmlns:x="urn:x"><a id="1"/><a id="2"/></tt>""",
         )
-        assertEquals("1", element.firstChildElement("http://www.w3.org/ns/ttml", "a")?.plainAttribute("id"))
+        assertEquals(
+            "1",
+            element.firstChildElement("http://www.w3.org/ns/ttml", "a")?.plainAttribute("id")
+        )
         assertNull(element.firstChildElement("urn:missing", "a"))
     }
 }

@@ -41,7 +41,8 @@ object SystemLyricsLocale {
 
     /** 系统书写系统，日语额外前置拉丁字母。 */
     private fun systemScripts(locale: Locale): List<String> {
-        val script = locale.script.takeIf { it.isNotBlank() } ?: scriptOf(locale) ?: return emptyList()
+        val script =
+            locale.script.takeIf { it.isNotBlank() } ?: scriptOf(locale) ?: return emptyList()
         return if (locale == Locale.JAPAN) listOf(LATN, script) else listOf(script)
     }
 

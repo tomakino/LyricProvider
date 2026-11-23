@@ -47,13 +47,12 @@ fun LyricsDocument.toSong(
             this.end = end
             duration = (end - begin).coerceAtLeast(0L)
             text = display.text
-            words = display.words
-                .map { it.toLyricWord() }
-                .toMutableList()
+            words = display.words.toTimedWords()
             secondary = display.background
-            secondaryWords = display.backgroundWords.map { it.toLyricWord() }.toMutableList()
+            secondaryWords = display.backgroundWords.toTimedWords()
             translation = display.translation
-            translationWords = display.translationWords?.map { it.toLyricWord() }
+            translationWords =
+                display.translationWords?.takeIf { it.hasCompleteTiming() }?.toTimedWords()
             roma = line.transliterations.firstOrNull()?.text
             // 宿主 `isAlignedRight = true` 渲染在右，与 Apple 的 6（右）同向
             isAlignedRight = index in rightAligned
@@ -144,6 +143,14 @@ private fun resolveAlignment(
         if (previousBlank != currentBlank) ALIGN_RIGHT else ALIGN_LEFT
     }
 }
+
+/** 词序列是否带完整的逐词时间。 */
+private fun List<LyricsWord>.hasCompleteTiming(): Boolean =
+    isNotEmpty() && all { it.start != null && it.end != null }
+
+/** 带完整时间的词序列；时间不完整时返回空，交由调用方按行渲染。 */
+private fun List<LyricsWord>.toTimedWords(): MutableList<LyricWord> =
+    if (hasCompleteTiming()) mapTo(mutableListOf()) { it.toLyricWord() } else mutableListOf()
 
 fun LyricsWord.toLyricWord(): LyricWord {
     val begin = start?.inWholeMilliseconds ?: 0L

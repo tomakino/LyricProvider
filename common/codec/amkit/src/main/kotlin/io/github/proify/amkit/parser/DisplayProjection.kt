@@ -33,7 +33,7 @@ internal fun LyricsLine.displayIn(options: DisplayOptions): DisplayLine {
         ?.let { language -> transliterations.matchLanguage(language, options.languageFallback) }
 
     val replacement = options.applyReplacement &&
-        localized?.type.equals(REPLACEMENT_TYPE, ignoreCase = true)
+            localized?.type.equals(REPLACEMENT_TYPE, ignoreCase = true)
     val timed = localized?.hasCompleteTiming() == true
     val romanizedText = romanized?.text?.takeIf { it.isNotBlank() }
     val romanizedWords = romanized?.words?.takeIf { romanized.hasCompleteTiming() }

@@ -15,6 +15,7 @@ import com.highcapable.yukihookapi.hook.xposed.YukiHookXposedModule
     scope = ["com.apple.android.music"],
     staticScope = true,
 )
+/** Xposed 模块入口。 */
 open class HookEntry : YukiHookXposedModule {
 
     override fun onHook() {

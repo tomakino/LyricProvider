@@ -105,7 +105,12 @@ data class LyricsDocument(
      * @return 首条匹配的音译
      */
     fun transliterationFor(language: String, fallback: Boolean = false): LyricsText? =
-        lines.firstNotNullOfOrNull { line -> line.transliterations.matchLanguage(language, fallback) }
+        lines.firstNotNullOfOrNull { line ->
+            line.transliterations.matchLanguage(
+                language,
+                fallback
+            )
+        }
 
     /** 是否包含指定语言的译文。 */
     fun hasTranslation(language: String, fallback: Boolean = false): Boolean =
@@ -117,5 +122,6 @@ data class LyricsDocument(
 
     /** 出现过的音译语言。 */
     val transliterationLanguages: List<String>
-        get() = lines.flatMap { line -> line.transliterations.mapNotNull { it.language } }.distinct()
+        get() = lines.flatMap { line -> line.transliterations.mapNotNull { it.language } }
+            .distinct()
 }

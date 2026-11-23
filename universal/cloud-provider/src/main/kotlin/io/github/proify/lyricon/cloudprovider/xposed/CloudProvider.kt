@@ -6,16 +6,11 @@
 
 package io.github.proify.lyricon.cloudprovider.xposed
 
-import com.highcapable.yukihookapi.extension.kavaref.toClass
-import com.highcapable.yukihookapi.extension.kavaref.hook
-
-import com.highcapable.yukihookapi.extension.kavaref.hook
-
-import com.highcapable.yukihookapi.extension.kavaref.toClass
-
 import android.media.MediaMetadata
 import android.media.session.PlaybackState
 import com.highcapable.kavaref.KavaRef.Companion.resolve
+import com.highcapable.yukihookapi.extension.kavaref.hook
+import com.highcapable.yukihookapi.extension.kavaref.toClass
 import com.highcapable.yukihookapi.hook.entity.YukiBaseHooker
 import com.highcapable.yukihookapi.hook.log.YLog
 import io.github.proify.cloudlyric.LyricsResult

@@ -21,6 +21,7 @@ import com.highcapable.yukihookapi.hook.entity.YukiBaseHooker
 import com.highcapable.yukihookapi.hook.log.YLog
 import com.kyant.taglib.TagLib
 import io.github.proify.cloudlyric.ProviderLyrics
+import io.github.proify.extensions.toRichLyricLines
 import io.github.proify.lrckit.EnhanceLrcParser
 import io.github.proify.lyricon.lyric.model.Song
 import io.github.proify.lyricon.paprovider.bridge.BridgeConstants
@@ -160,7 +161,7 @@ object PowerAmp : YukiBaseHooker(), DownloadCallback {
             name = data.title,
             artist = data.artist,
             duration = data.duration,
-            lyrics = parsedLrc
+            lyrics = parsedLrc.toRichLyricLines()
         )
 
         updateSong(song)

@@ -6,21 +6,16 @@
 
 package io.github.proify.lyricon.library.meizuprovider
 
-import com.highcapable.yukihookapi.extension.kavaref.toClass
-import com.highcapable.yukihookapi.extension.kavaref.hook
-
-import com.highcapable.yukihookapi.extension.kavaref.hook
-
-import com.highcapable.yukihookapi.extension.kavaref.toClass
-
 import android.app.Notification
 import android.app.NotificationManager
 import android.media.session.PlaybackState
 import android.util.Log
 import com.highcapable.kavaref.KavaRef.Companion.resolve
+import com.highcapable.kavaref.extension.classOf
+import com.highcapable.yukihookapi.extension.kavaref.hook
+import com.highcapable.yukihookapi.extension.kavaref.toClass
 import com.highcapable.yukihookapi.hook.entity.YukiBaseHooker
 import com.highcapable.yukihookapi.hook.log.YLog
-import io.github.proify.extensions.android.Flyme
 import io.github.proify.lyricon.provider.LyriconFactory
 import io.github.proify.lyricon.provider.LyriconProvider
 import io.github.proify.lyricon.provider.ProviderLogo
@@ -46,7 +41,7 @@ open class MeizuProvider(
 
     override fun onHook() {
         YLog.debug("Hooking processName: $processName")
-        Flyme.mock(appClassLoader!!)
+        Flyme.mock(hostClassLoader!!)
 
         registerAppLifecycle(true) {
             onCreate {
@@ -62,7 +57,7 @@ open class MeizuProvider(
             .apply {
                 firstMethod {
                     name = "setPlaybackState"
-                    parameters(PlaybackState::class.java)
+                    parameters(classOf<PlaybackState>())
                 }.hook {
                     after {
                         val state = (args[0] as PlaybackState)
@@ -73,7 +68,7 @@ open class MeizuProvider(
     }
 
     private fun hookNotify() {
-        NotificationManager::class.java.name.toClass()
+        classOf<NotificationManager>().name.toClass()
             .resolve()
             .apply {
                 firstMethod {

@@ -1,5 +1,3 @@
-import org.gradle.kotlin.dsl.kotlin
-
 /*
  * Copyright 2026 Proify, Tomakino
  * Licensed under the Apache License, Version 2.0

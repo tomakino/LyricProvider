@@ -17,6 +17,7 @@ import com.highcapable.yukihookapi.hook.entity.YukiBaseHooker
 import com.highcapable.yukihookapi.hook.log.YLog
 import com.kyant.taglib.TagLib
 import io.github.proify.extensions.android.Reflect
+import io.github.proify.extensions.toRichLyricLines
 import io.github.proify.lrckit.EnhanceLrcParser
 import io.github.proify.lyricon.lyric.model.Song
 import io.github.proify.lyricon.provider.LyriconFactory
@@ -153,7 +154,7 @@ open class Gramophone(val tag: String = "GramophoneProvider") : YukiBaseHooker()
 
         if (!rawLyric.isNullOrBlank()) {
             val document = EnhanceLrcParser.parse(rawLyric, durationMs)
-            song.lyrics = document.lines
+            song.lyrics = document.lines.toRichLyricLines()
         }
 
         provider?.player?.setSong(song)

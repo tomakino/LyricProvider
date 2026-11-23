@@ -11,7 +11,7 @@ import io.github.proify.lyricon.lyric.model.LyricWord
 import java.util.regex.Pattern
 
 /**
- * KRC 歌词解析器。
+ * 酷狗音乐 KRC 歌词解析器。
  * 按行解析行时间、元数据与逐字标签，单行异常不影响其他行。
  */
 object KrcParser {

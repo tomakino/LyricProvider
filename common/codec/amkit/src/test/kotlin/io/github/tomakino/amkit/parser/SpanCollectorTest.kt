@@ -33,7 +33,7 @@ class SpanCollectorTest {
     fun `x-roman 收集为音译`() {
         val line = document(
             """<span begin="1.0" end="2.0">Hi</span>""" +
-                """<span ttm:role="x-roman" xml:lang="ja-Latn">hai</span>""",
+                    """<span ttm:role="x-roman" xml:lang="ja-Latn">hai</span>""",
         ).lines.single()
 
         assertEquals(listOf("hai"), line.transliterations.map { it.text })
@@ -44,7 +44,7 @@ class SpanCollectorTest {
     fun `x-translation 收集为译文`() {
         val line = document(
             """<span begin="1.0" end="2.0">Hi</span>""" +
-                """<span ttm:role="x-translation" xml:lang="zh-Hans">你好</span>""",
+                    """<span ttm:role="x-translation" xml:lang="zh-Hans">你好</span>""",
         ).lines.single()
 
         assertEquals(listOf("你好"), line.translations.map { it.text })
@@ -54,7 +54,7 @@ class SpanCollectorTest {
     fun `未知 role 当作普通词`() {
         val line = document(
             """<span begin="1.0" end="2.0">Hi</span>""" +
-                """<span ttm:role="x-weird" begin="2.0" end="3.0">!</span>""",
+                    """<span ttm:role="x-weird" begin="2.0" end="3.0">!</span>""",
         ).lines.single()
 
         assertEquals("Hi!", line.text)
@@ -70,7 +70,7 @@ class SpanCollectorTest {
     fun `嵌套背景组`() {
         val line = document(
             """<span begin="1.0" end="2.0">Main</span>""" +
-                """<span ttm:role="x-bg" begin="2.0" end="3.0"><span>a</span><span>b</span></span>""",
+                    """<span ttm:role="x-bg" begin="2.0" end="3.0"><span>a</span><span>b</span></span>""",
         ).lines.single()
 
         assertEquals("Main", line.text)
