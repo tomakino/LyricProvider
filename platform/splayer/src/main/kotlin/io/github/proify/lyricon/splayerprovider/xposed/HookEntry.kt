@@ -12,7 +12,7 @@ import com.highcapable.yukihookapi.hook.xposed.YukiHookXposedModule
 
 @YukiHookLibXposedEntry(
     targetApiVersion = 101,
-    scope = arrayOf("top.imsyy.splayer.android"),
+    scope = ["top.imsyy.splayer.android"],
     staticScope = true
 )
 open class HookEntry : YukiHookXposedModule {

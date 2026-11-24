@@ -164,7 +164,11 @@
         <option name="selectionMode" value="DROPDOWN" />
         <DialogSelection />
       </SelectionState>
-      <SelectionState runConfigName="SystemLyricsLocaleTest">
+      <SelectionState runConfigName="platform.qqmusic">
+        <option name="selectionMode" value="DROPDOWN" />
+        <DialogSelection />
+      </SelectionState>
+      <SelectionState runConfigName="platform.qq-music-free">
         <option name="selectionMode" value="DROPDOWN" />
         <DialogSelection />
       </SelectionState>

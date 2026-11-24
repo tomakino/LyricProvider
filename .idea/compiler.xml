@@ -25,6 +25,7 @@
       <module name="LyricProvider.meizu-provider" target="21" />
       <module name="LyricProvider.music-free" target="21" />
       <module name="LyricProvider.platform.feiniu-music" target="21" />
+      <module name="LyricProvider.platform.qqmusic" target="21" />
       <module name="LyricProvider.poweramp-music" target="21" />
       <module name="LyricProvider.qishui-music" target="21" />
       <module name="LyricProvider.qq-music" target="21" />

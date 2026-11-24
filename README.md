@@ -19,22 +19,24 @@
 
 ### 核心适配列表
 
-| 平台名称                 | 标识符              | 功能说明                                |
-|:-------------------------|:--------------------|:----------------------------------------|
-| 🍎 **Apple Music**       | `apple-music`       | 支持逐字、翻译、背景人声、对唱格式歌词  |
-| ☁️ **网易云音乐/荣耀版** | `163-music`         | 支持逐字歌词、翻译歌词；Modern API 101+ |
-| 🐧 **QQ 音乐**           | `qq-music`          | 支持逐字歌词、翻译歌词                  |
-| 🐧 **QQ 音乐 HD**        | `qq-music-hd`       | 支持逐字歌词、翻译歌词                  |
-| 🔵 **波点音乐**          | `bodian`            | 支持逐字歌词，离线可用                  |
-| 🧊 **LX 音乐**           | `lx`                | 支持翻译歌词显示                        |
-| 🐶 **酷狗音乐/概念版**   | `kugou`             | **需在 App 内开启车载歌词模式**         |
-| 📻 **酷我音乐**          | `kuwo`              | **需在 App 内开启车载歌词模式**         |
-| 🎧 **Spotify**           | `spotify`           | 支持标准歌词、逐字歌词                  |
-| ⚡ **Poweramp**          | `poweramp`          | 支持网络匹配及本地内嵌歌词              |
-| 🧂 **Salt 音乐**         | `salt-player-music` | 基于魅族标准歌词接口适配                |
-| 🎵 **汽水音乐**          | `qishui`            | 支持动态歌词、翻译歌词                  |
-| 🎵 **MusicFree**         | `music-free`        | 支持翻译                                |
-| 🎵 **飞牛音乐**          | `feiniu`            | 支持当前行纯文本歌词及播放状态同步      |
+| 平台名称          | 标识符          | 功能说明                               |
+|:------------------|:----------------|:---------------------------------------|
+| Apple Music       | `apple-music`   | 支持逐字、翻译、背景人声、对唱格式歌词 |
+| 网易云音乐/荣耀版 | `163-music`     | 支持逐字歌词、翻译歌词                 |
+| QQ 音乐           | `qq-music`      | 支持逐字歌词、翻译歌词                 |
+| QQ 音乐简洁版     | `qq-music-free` | 支持逐字歌词、翻译歌词                 |
+| QQ 音乐 HD        | `qq-music-hd`   | 支持逐字歌词、翻译歌词                 |
+| 波点音乐          | `bodian`        | 支持逐字歌词，翻译歌词                 |
+| LX 音乐           | `lx`            | 支持普通歌词，翻译歌词                 |
+| 酷狗音乐/概念版   | `kugou`         | 支持逐字歌词，翻译歌词                 |
+| 酷我音乐          | `kuwo`          | 需在 App 内开启车载歌词模式            |
+| Spotify           | `spotify`       | 支持标准歌词、逐字歌词                 |
+| Poweramp          | `poweramp`      | 支持网络匹配及本地内嵌歌词             |
+| 汽水音乐          | `qishui`        | 支持逐字歌词、翻译歌词                 |
+| MusicFree         | `music-free`    | 支持翻译                               |
+| 飞牛音乐          | `feiniu`        | 支持普通歌词                           |
+| Gramophone        | `gramophone`    | 支持普通/逐字歌词                      |
+| Symfonium         | `symfonium`     | 支持普通歌词                           |
 
 ### 通用/特殊模块
 
@@ -44,7 +46,7 @@
 | 📱 **魅族歌词支持** | `meizu-provider` | 适用于已适配魅族状态栏歌词的播放器 |
 | 🧂 **车载歌词支持** | `car-provider`   | 适用于已适配车载歌词适配的播放器   |
 
-### 💡 已原生适配的应用
+### 🤩 已原生适配的应用
 
 - [**光锥音乐**](https://coneplayer.trantor.ink/)
 - **Flamingo**
@@ -54,10 +56,13 @@
 - **Sollin Player**
 - [**QZ Music**](https://github.com/lqtmcstudio/QZMusic)
 - [**棉花音乐**](https://github.com/pure-music/PureMusic)
-- [**椒盐音乐**](https://moriafly.com/saltplayer/)
+- [**Salt Player**](https://moriafly.com/saltplayer/)
+- [**MD3Music**](https://github.com/zzyoxml/md3Music)
+- [**NeriPlayer**](https://github.com/cwuom/NeriPlayer)
 
 #### 已适配了但没有你的播放器？请[提交 issue](https://github.com/tomakino/LyricProvider/issues)。
 
+   
 ---
 
 ## 📥 快速安装

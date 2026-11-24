@@ -21,6 +21,12 @@ object KrcLyricParser {
 
     private val tagRegex = """<\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*>""".toRegex()
 
+    /**
+     * 解析 QRC 文本。
+     * @param content 已解密的 QRC 原文。
+     * @param inferUntaggedTime 无标签字符是否以上一字结束时间作为开始时间。
+     * @return 按行顺序排列的歌词行。
+     */
     fun parse(content: String?, inferUntaggedTime: Boolean = true): List<LyricLine> {
         if (content.isNullOrBlank()) return emptyList()
 
@@ -30,6 +36,12 @@ object KrcLyricParser {
             .toList()
     }
 
+    /**
+     * 解析单行歌词。
+     * @param rawLine 原始行文本。
+     * @param inferUntaggedTime 无标签字符是否推断开始时间。
+     * @return 解析后的歌词行；缺少行时间或正文时为 null。
+     */
     private fun parseLine(rawLine: String, inferUntaggedTime: Boolean): LyricLine? {
         val time = lineTimeRegex.find(rawLine) ?: return null
         val lineStart = time.groupValues[1].toLongOrNull() ?: return null
@@ -94,6 +106,13 @@ object KrcLyricParser {
         )
     }
 
+    /**
+     * 逐字标签在正文中的位置与时间。
+     * @property start 标签起始下标。
+     * @property endExclusive 标签结束后的下标。
+     * @property offset 相对行开始的偏移，毫秒。
+     * @property duration 持续时长，毫秒。
+     */
     private class Tag(
         val start: Int,
         val endExclusive: Int,

@@ -11,7 +11,7 @@ import com.highcapable.yukihookapi.hook.xposed.YukiHookXposedModule
 
 @YukiHookLibXposedEntry(
     targetApiVersion = 101,
-    scope = arrayOf("code.name.monkey.retromusic"),
+    scope = ["code.name.monkey.retromusic"],
     staticScope = true
 )
 class HookEntry : YukiHookXposedModule {

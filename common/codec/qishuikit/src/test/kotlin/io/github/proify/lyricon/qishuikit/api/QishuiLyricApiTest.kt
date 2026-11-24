@@ -36,6 +36,17 @@ class QishuiLyricApiTest {
     }
 
     @Test
+    fun fetchesTranslation() = runBlocking {
+        val lyric = api.fetch("6938299336187086850")
+
+        assertNotNull(lyric)
+        val translation = lyric.toSong()?.lyrics?.mapNotNull { it.translation }
+
+        assertNotNull(translation)
+        assertTrue(translation.isNotEmpty())
+    }
+
+    @Test
     fun returnsNullForUnknownTrack() = runBlocking {
         assertNull(api.fetch("1"))
     }

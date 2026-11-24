@@ -6,10 +6,6 @@
 
 <resources>
 
-    <string-array name="xposed_scope">
-        <item>com.tencent.qqmusic</item>
-    </string-array>
-
     <string-array name="lyricon_module_tags">
         <item>$syllable</item>
         <item>$translation</item>

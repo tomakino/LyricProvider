@@ -4,12 +4,15 @@
  * http://www.apache.org/licenses/LICENSE-2.0
  */
 
+@file:Suppress("DestructuringDeclaration")
+
 package io.github.proify.lyricon.splayerprovider.xposed
 
-import android.annotation.SuppressLint
 import android.media.session.PlaybackState
 import android.webkit.WebView
 import com.highcapable.kavaref.KavaRef.Companion.resolve
+import com.highcapable.kavaref.extension.classOf
+import com.highcapable.kavaref.extension.makeAccessible
 import com.highcapable.yukihookapi.extension.kavaref.hook
 import com.highcapable.yukihookapi.extension.kavaref.toClass
 import com.highcapable.yukihookapi.hook.entity.YukiBaseHooker
@@ -21,19 +24,12 @@ import io.github.proify.lyricon.provider.LyriconFactory
 import io.github.proify.lyricon.provider.LyriconProvider
 import io.github.proify.lyricon.provider.ProviderLogo
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
-import kotlinx.serialization.json.longOrNull
 
 object SPlayerLyricProvider : YukiBaseHooker() {
     private const val TAG = "SPlayerProvider"
     private const val INJECTED_JS =
-        "(function(){if(window.__slpLyrics)return;window.__slpLyrics=true;var i=setInterval(function(){try{var a=document.querySelector('#app');if(!a||!a.__vue_app__)return;var p=a.__vue_app__.config.globalProperties['\$pinia'];if(!p)return;var m=p._s.get('music');if(!m)return;var l=JSON.stringify(m.songLyric.lrcData??[]);var y=JSON.stringify(m.songLyric.yrcData??[]);var c=l+y;if(c!==window.__slpLast&&c!=='[][]'){window.__slpLast=c;if(typeof Capacitor!=='undefined'&&Capacitor.Plugins&&Capacitor.Plugins.AndroidNativePlayback){Capacitor.Plugins.AndroidNativePlayback.updateFloatingLyricData({lrcData:l,yrcData:y});}}}catch(e){}},2000);})();"
+        $$"(function(){if(window.__slpLyrics)return;window.__slpLyrics=true;var i=setInterval(function(){try{var a=document.querySelector('#app');if(!a||!a.__vue_app__)return;var p=a.__vue_app__.config.globalProperties['$pinia'];if(!p)return;var m=p._s.get('music');if(!m)return;var l=JSON.stringify(m.songLyric.lrcData??[]);var y=JSON.stringify(m.songLyric.yrcData??[]);var c=l+y;if(c!==window.__slpLast&&c!=='[][]'){window.__slpLast=c;if(typeof Capacitor!=='undefined'&&Capacitor.Plugins&&Capacitor.Plugins.AndroidNativePlayback){Capacitor.Plugins.AndroidNativePlayback.updateFloatingLyricData({lrcData:l,yrcData:y});}}}catch(e){}},2000);})();"
     private var provider: LyriconProvider? = null
-    private var initAttempted = false
     private val json = Json { ignoreUnknownKeys = true; coerceInputValues = true }
 
     private var currentSongName = ""
@@ -44,12 +40,27 @@ object SPlayerLyricProvider : YukiBaseHooker() {
     override fun onHook() {
         YLog.debug(tag = TAG, msg = "正在注入进程: $processName")
 
+        registerAppLifecycle {
+            onCreate {
+                val created = LyriconFactory.createProvider(
+                    context = this,
+                    providerPackageName = Constants.PROVIDER_PACKAGE_NAME,
+                    playerPackageName = Constants.MUSIC_PACKAGE_NAME,
+                    logo = ProviderLogo.fromSvg(Constants.ICON),
+                )
+                provider = created
+                created.player.setDisplayTranslation(true)
+                created.player.setDisplayRoma(true)
+                created.register()
+            }
+        }
+
         injectLyricsJs()
 
         "top.imsyy.splayer.android.playback.PlaybackManager".toClass().resolve().apply {
             firstMethod {
                 name = "updateFloatingLyricSongInfo"
-                parameters(String::class.java, String::class.java)
+                parameters(classOf<String>(), classOf<String>())
             }.hook {
                 after {
                     currentSongName = args[0] as? String ?: ""
@@ -63,10 +74,9 @@ object SPlayerLyricProvider : YukiBaseHooker() {
 
             firstMethod {
                 name = "updateFloatingLyricData"
-                parameters(String::class.java, String::class.java)
+                parameters(classOf<String>(), classOf<String>())
             }.hook {
                 after {
-                    ensureInitialized()
                     val lrcJson = args[0] as? String ?: ""
                     val yrcJson = args[1] as? String ?: ""
                     val song = parseToSong(lrcJson, yrcJson)
@@ -81,38 +91,17 @@ object SPlayerLyricProvider : YukiBaseHooker() {
             }
 
             firstMethod {
-                name = "updateFloatingLyricProgress"
-                parameters(
-                    Long::class.javaPrimitiveType ?: Long::class.java,
-                    Boolean::class.javaPrimitiveType ?: Boolean::class.java
-                )
-            }.hook {
-                after {
-                    ensureInitialized()
-                    val timeMs = args[0] as? Long ?: 0L
-                    val playing = args[1] as? Boolean ?: false
-                    YLog.debug(
-                        tag = TAG,
-                        msg = "updateFloatingLyricProgress: timeMs=$timeMs, playing=$playing"
-                    )
-                    provider?.player?.setPosition(timeMs)
-                    provider?.player?.setPlaybackState(playing)
-                }
-            }
-
-            firstMethod {
                 name = "updateMetadata"
                 parameters($$"top.imsyy.splayer.android.playback.PlaybackManager$TrackMetadata".toClass())
             }.hook {
                 after {
-                    ensureInitialized()
                     val metadata = args[0] ?: return@after
                     try {
                         if (titleField == null) {
                             titleField = metadata::class.java.getDeclaredField("title")
-                                .apply { isAccessible = true }
+                                .apply { makeAccessible() }
                             artistField = metadata::class.java.getDeclaredField("artist")
-                                .apply { isAccessible = true }
+                                .apply { makeAccessible() }
                         }
                         val title = titleField!!.get(metadata) as? String ?: return@after
                         val artist = artistField!!.get(metadata) as? String ?: ""
@@ -133,27 +122,11 @@ object SPlayerLyricProvider : YukiBaseHooker() {
         "android.media.session.MediaSession".toClass().resolve().apply {
             firstMethod {
                 name = "setPlaybackState"
-                parameters(PlaybackState::class.java)
+                parameters(classOf<PlaybackState>())
             }.hook {
                 after {
-                    ensureInitialized()
                     val state = args[0] as? PlaybackState
-                    if (state != null) {
-                        YLog.debug(
-                            tag = TAG,
-                            msg = "MediaSession.setPlaybackState: state=${state.state}, position=${state.position}"
-                        )
-                    } else {
-                        YLog.debug(tag = TAG, msg = "MediaSession.setPlaybackState: state=null")
-                    }
-                    if (provider == null) {
-                        YLog.error(
-                            tag = TAG,
-                            msg = "MediaSession.setPlaybackState: provider is null!"
-                        )
-                    } else {
-                        provider?.player?.setPlaybackState(state)
-                    }
+                    provider?.player?.setPlaybackState(state)
                 }
             }
         }
@@ -163,7 +136,7 @@ object SPlayerLyricProvider : YukiBaseHooker() {
         "android.webkit.WebViewClient".toClass().resolve().apply {
             firstMethod {
                 name = "onPageFinished"
-                parameters(WebView::class.java, String::class.java)
+                parameters(classOf<WebView>(), classOf<String>())
             }.hook {
                 after {
                     val webView = args[0] as? WebView ?: return@after
@@ -173,46 +146,27 @@ object SPlayerLyricProvider : YukiBaseHooker() {
         }
     }
 
-    @SuppressLint("PrivateApi")
-    @Synchronized
-    private fun ensureInitialized() {
-        if (provider != null || initAttempted) return
-        initAttempted = true
-        try {
-            val context = try {
-                val atClass = Class.forName("android.app.ActivityThread")
-                atClass.getMethod("currentApplication").invoke(null) as? android.content.Context
-            } catch (e: Exception) {
-                YLog.error(tag = TAG, msg = "ensureInitialized: ActivityThread error: ${e.message}")
-                null
-            }
-            if (context == null) {
-                initAttempted = false
-                return
-            }
-            val created = LyriconFactory.createProvider(
-                context = context,
-                providerPackageName = Constants.PROVIDER_PACKAGE_NAME,
-                playerPackageName = Constants.MUSIC_PACKAGE_NAME,
-                logo = ProviderLogo.fromSvg(Constants.ICON),
-                processName = processName
-            )
-            created.player.setDisplayTranslation(true)
-            created.player.setDisplayRoma(true)
-            created.register()
-            provider = created
-            Runtime.getRuntime().addShutdownHook(Thread {
-                provider?.destroy()
-                YLog.debug(tag = TAG, msg = "provider destroyed on shutdown")
-            })
-            YLog.debug(tag = TAG, msg = "provider registered")
-        } catch (e: Exception) {
-            initAttempted = false
-            YLog.error(tag = TAG, msg = "ensureInitialized failed: ${e.message}")
-        }
-    }
 
+    //    {
+//        "words":[
+//        {
+//            "startTime": 35809,
+//            "endTime": 40096,
+//            "word": "背上所有的梦与想",
+//            "romanWord": ""
+//        }
+//        ],
+//        "translatedLyric": "",
+//        "romanLyric": "",
+//        "isBG": false,
+//        "isDuet": false,
+//        "startTime": 35809,
+//        "endTime": 40096
+//    },
     private fun parseToSong(lrcJson: String, yrcJson: String): Song? {
+        hostApplication?.filesDir?.resolve("lrcJson.json")?.writeText(lrcJson)
+        hostApplication?.filesDir?.resolve("yrcJson.json")?.writeText(yrcJson)
+
         try {
             val effectiveJson = when {
                 yrcJson.isNotBlank() && yrcJson != "[]" -> yrcJson
@@ -221,26 +175,23 @@ object SPlayerLyricProvider : YukiBaseHooker() {
             }
 
             val lines = mutableListOf<RichLyricLine>()
-            val jsonArray: JsonArray = json.parseToJsonElement(effectiveJson).jsonArray
+            val lyricLines = json.decodeFromString<List<LyricLine>>(effectiveJson)
 
-            for (element in jsonArray) {
-                val obj = element.jsonObject
-                val begin = obj["startTime"]?.jsonPrimitive?.longOrNull ?: 0L
-                val end = obj["endTime"]?.jsonPrimitive?.longOrNull ?: 0L
-                val translation = obj["translatedLyric"]?.jsonPrimitive?.contentOrNull ?: ""
-                val wordsArr = obj["words"]?.jsonArray
+            for (line in lyricLines) {
+
+                val begin = line.startTime
+                val end = line.endTime
+                val translation = line.translatedLyric
+                val wordsArr = line.words
 
                 val words = mutableListOf<LyricWord>()
 
-                if (wordsArr != null) {
-                    for (w in wordsArr) {
-                        val wObj = w.jsonObject
-                        val text = wObj["word"]?.jsonPrimitive?.contentOrNull ?: ""
-                        val wBegin = wObj["startTime"]?.jsonPrimitive?.longOrNull ?: 0L
-                        val wEnd = wObj["endTime"]?.jsonPrimitive?.longOrNull ?: 0L
-                        if (text.isNotEmpty()) {
-                            words.add(LyricWord(text = text, begin = wBegin, end = wEnd))
-                        }
+                for (word in wordsArr) {
+                    val text = word.word
+                    val wBegin = word.startTime
+                    val wEnd = word.endTime
+                    if (text.isNotEmpty()) {
+                        words.add(LyricWord(text = text, begin = wBegin, end = wEnd))
                     }
                 }
 
@@ -252,8 +203,10 @@ object SPlayerLyricProvider : YukiBaseHooker() {
                         begin = begin,
                         end = end,
                         text = fullText,
+                        words = if (words.singleOrNull().let {
+                                it != null && it.begin == begin && it.end == end
+                            }) null else words.ifEmpty { null },
                         translation = translation.ifEmpty { null },
-                        words = words.ifEmpty { null }
                     )
                 )
             }

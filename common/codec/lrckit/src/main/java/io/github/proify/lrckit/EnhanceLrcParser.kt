@@ -22,8 +22,10 @@ object EnhanceLrcParser {
     /** 单个行时间标签。 */
     private val LINE_TAG = Pattern.compile("""\[(\d{1,3})[ :.](\d{2})(?:[ :.](\d{1,3}))?]""")
 
-    /** 逐字时间标签。 */
-    private val WORD_TAG = Pattern.compile("""<(\d{1,3})[ :.](\d{2})(?:[ :.](\d{1,3}))?>""")
+    /** 逐字时间标签，支持尖括号与方括号两种写法。 */
+    private val WORD_TAG = Pattern.compile(
+        """<(\d{1,3})[ :.](\d{2})(?:[ :.](\d{1,3}))?>|\[(\d{1,3})[ :.](\d{2})(?:[ :.](\d{1,3}))?]"""
+    )
 
     /** 元数据标签。 */
     private val META_TAG = Pattern.compile("""^\[(\w+)\s*:\s*(.*)]$""")
@@ -100,13 +102,14 @@ object EnhanceLrcParser {
             }
             if (text.isEmpty()) return@forEachIndexed
 
-            val wordText = if (!leadingConsumed && leadingText.isNotBlank()) {
-                leadingConsumed = true
-                leadingText + text
-            } else {
-                text
-            }
-            words += ParsedWord(span.time, wordText)
+            val isLeading = !leadingConsumed && leadingText.isNotBlank()
+
+            if (isLeading) leadingConsumed = true
+
+            val wordText = if (isLeading) leadingText + text else text
+            val wordBegin = if (isLeading) times.firstOrNull() ?: span.time else span.time
+
+            words += ParsedWord(wordBegin, wordText)
         }
 
         val text = if (words.isEmpty()) {
@@ -218,8 +221,12 @@ object EnhanceLrcParser {
         val matcher = WORD_TAG.matcher(content)
         val spans = mutableListOf<WordSpan>()
         while (matcher.find()) {
+            val minute = matcher.group(1) ?: matcher.group(4) ?: continue
+            val second = matcher.group(2) ?: matcher.group(5) ?: continue
+            val fraction = matcher.group(3) ?: matcher.group(6)
+
             spans += WordSpan(
-                time = toMs(matcher.group(1), matcher.group(2), matcher.group(3)),
+                time = toMs(minute, second, fraction),
                 start = matcher.start(),
                 end = matcher.end(),
             )

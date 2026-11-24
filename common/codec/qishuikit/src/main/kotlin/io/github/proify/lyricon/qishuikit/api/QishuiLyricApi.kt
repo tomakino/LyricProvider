@@ -15,12 +15,23 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.util.concurrent.TimeUnit
 
+/**
+ * 汽水歌词接口客户端。
+ * @param client HTTP 客户端。
+ * @param json JSON 解码器。
+ * @param endpoint 接口地址模板，`%s` 为曲目 ID 占位符。
+ */
 class QishuiLyricApi(
     private val client: OkHttpClient = DEFAULT_CLIENT,
     private val json: Json = DEFAULT_JSON,
     private val endpoint: String = DEFAULT_ENDPOINT
 ) {
 
+    /**
+     * 拉取指定曲目的歌词。
+     * @param trackId 曲目 ID。
+     * @return 歌词数据；请求失败、响应不成功或缺少歌词时为 null。
+     */
     suspend fun fetch(trackId: String): QishuiLyric? = withContext(Dispatchers.IO) {
         val request = Request.Builder()
             .url(endpoint.format(trackId))
@@ -45,18 +56,23 @@ class QishuiLyricApi(
             duration = track?.duration ?: 0L,
             type = lyric.type ?: "krc",
             content = content,
-            langTranslations = lyric.langTranslations
+            langTranslations = lyric.langTranslations,
+            translations = lyric.translations
         )
     }
 
     private companion object {
+        /** 默认歌词接口地址模板。 */
         const val DEFAULT_ENDPOINT =
             "https://api.qishui.com/luna/h5/seo_track?track_id=%s&device_platform=web"
+        /** 默认请求标识。 */
         const val USER_AGENT =
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36"
 
+        /** 默认 JSON 解码器。 */
         val DEFAULT_JSON = Json { ignoreUnknownKeys = true }
 
+        /** 默认 HTTP 客户端。 */
         val DEFAULT_CLIENT: OkHttpClient = OkHttpClient.Builder()
             .connectTimeout(8, TimeUnit.SECONDS)
             .readTimeout(8, TimeUnit.SECONDS)

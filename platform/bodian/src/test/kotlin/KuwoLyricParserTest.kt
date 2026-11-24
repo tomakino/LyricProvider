@@ -8,6 +8,7 @@
 
 import io.github.proify.lyricon.bodianprovider.xposed.KuwoLyricParser
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -131,5 +132,38 @@ class KuwoLyricParserTest {
         assertEquals(97_504L, KuwoLyricParser.parseTimeTag("[01:37.504]"))
         assertEquals(62_000L, KuwoLyricParser.parseTimeTag("[01:02]"))
         assertEquals(-1_500L, KuwoLyricParser.parseTimeTag("[-00:01.500]"))
+    }
+
+    @Test
+    fun `翻译行归到上一行原文`() {
+        val content = buildString {
+            appendLine(header)
+            appendLine("[00:04.021]" + tag(0, 300) + "I can't go home")
+            appendLine("[00:09.810]" + tag(0, 0) + "我回不了家")
+            appendLine("[00:09.810]" + tag(0, 300) + "They don't love me")
+            appendLine("[00:15.016]" + tag(0, 0) + "他们不再像从前那样爱我")
+        }
+
+        val lines = KuwoLyricParser.parse(content)
+
+        assertEquals(2, lines.size)
+        assertEquals("I can't go home", lines[0].text)
+        assertEquals("我回不了家", lines[0].translation)
+        assertEquals("They don't love me", lines[1].text)
+        assertEquals("他们不再像从前那样爱我", lines[1].translation)
+    }
+
+    @Test
+    fun `纯空白翻译行被丢弃`() {
+        val content = buildString {
+            appendLine(header)
+            appendLine("[00:10.000]" + tag(0, 300) + "Hello")
+            appendLine("[00:12.000]" + tag(0, 0) + " " + tag(0, 0) + " ")
+        }
+
+        val line = KuwoLyricParser.parse(content).single()
+
+        assertEquals("Hello", line.text)
+        assertNull(line.translation)
     }
 }

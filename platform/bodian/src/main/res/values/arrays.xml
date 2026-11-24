@@ -6,12 +6,9 @@
 
 <resources>
 
-    <string-array name="xposed_scope">
-        <item>cn.wenyu.bodian</item>
-    </string-array>
-
     <string-array name="lyricon_module_tags">
-        <item>逐字歌词</item>
+        <item>$syllable</item>
+        <item>$translation</item>
     </string-array>
 
 </resources>

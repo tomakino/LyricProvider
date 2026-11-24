@@ -25,7 +25,7 @@ object LyricDiskCache {
     fun initialize(context: Context) {
         if (baseDir != null) return
         val languageTag = Locale.getDefault().toLanguageTag()
-        baseDir = File(context.filesDir, "lyricon/lyrics/v$CACHE_VERSION/$languageTag")
+        baseDir = File(context.cacheDir, "lyricon/lyrics/v$CACHE_VERSION/$languageTag")
             .apply { mkdirs() }
     }
 

@@ -6,6 +6,8 @@
 
 package io.github.proify.lyricon.bodianprovider.xposed
 
+import com.highcapable.kavaref.extension.classOf
+import com.highcapable.kavaref.extension.toClass
 import com.highcapable.yukihookapi.hook.log.YLog
 import com.highcapable.yukihookapi.hook.param.PackageParam
 
@@ -45,8 +47,8 @@ object FlutterLyricBridge {
         if (classLoader == null) return
         runCatching {
             param.run {
-                Class.forName(CLASS_METHOD_CALL, false, classLoader)
-                    .getDeclaredConstructor(String::class.java, Any::class.java)
+                CLASS_METHOD_CALL.toClass(classLoader, false)
+                    .getDeclaredConstructor(classOf<String>(), classOf<Any>())
                     .hook {
                         after {
                             val arguments = args.getOrNull(1) as? Map<*, *> ?: return@after

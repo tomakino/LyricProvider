@@ -6,6 +6,7 @@
 
 package io.github.proify.lyricon.qishuikit.model
 
+import java.util.Locale
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -92,6 +93,42 @@ class QishuiLyricTest {
         val song = lyric.toSong()
 
         assertEquals("译", song?.lyrics?.get(0)?.translation)
+    }
+
+    @Test
+    fun fillsTranslationFromTranslationsMap() {
+        val lyric = QishuiLyric(
+            id = "1",
+            type = "krc",
+            content = "[0,1000]<0,500,0>x",
+            translations = mapOf("cn" to "[00:00.00]译文")
+        )
+
+        val song = lyric.toSong()
+
+        assertEquals("译文", song?.lyrics?.get(0)?.translation)
+    }
+
+    @Test
+    fun picksTranslationByNormalizedLocale() {
+        val previous = Locale.getDefault()
+        try {
+            Locale.setDefault(Locale.SIMPLIFIED_CHINESE)
+
+            val lyric = QishuiLyric(
+                id = "1",
+                type = "krc",
+                content = "[0,1000]<0,500,0>x",
+                translations = mapOf(
+                    "en" to "[00:00.00]hello",
+                    "cn" to "[00:00.00]译文"
+                )
+            )
+
+            assertEquals("译文", lyric.toSong()?.lyrics?.get(0)?.translation)
+        } finally {
+            Locale.setDefault(previous)
+        }
     }
 
     @Test

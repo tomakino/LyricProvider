@@ -21,6 +21,48 @@ object QrcDownloader {
     const val DEFAULT_USER_AGENT =
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 
+    /** 搜索接口地址。 */
+    private const val SEARCH_URL = "https://c.y.qq.com/soso/fcgi-bin/client_search_cp"
+
+    /** 搜索结果里的 songid。 */
+    private val SONG_ID_PATTERN = Regex("\"songid\"\\s*:\\s*(\\d+)")
+
+    /**
+     * 按歌名与歌手搜索曲目 ID。
+     * @param title 歌名。
+     * @param artist 歌手，可为 null。
+     * @return 首个匹配的 songid；搜索失败时为 null。
+     */
+    @Throws(Exception::class)
+    fun searchMusicId(title: String, artist: String?, userAgent: String = DEFAULT_USER_AGENT): String? {
+        val query = listOfNotNull(title.trim(), artist?.trim()?.takeIf { it.isNotEmpty() }).joinToString(" ")
+        if (query.isBlank()) return null
+
+        val encoded = URLEncoder.encode(query, "UTF-8")
+        val url = URI.create(
+            SEARCH_URL + "?format=json&n=5&cr=1&p=1&w=" + encoded
+        ).toURL()
+
+        val conn = url.openConnection() as HttpURLConnection
+
+        return try {
+            conn.apply {
+                requestMethod = "GET"
+                connectTimeout = 10000
+                readTimeout = 10000
+                setRequestProperty("User-Agent", userAgent)
+                setRequestProperty("Referer", "https://y.qq.com/")
+            }
+
+            if (conn.responseCode != HttpURLConnection.HTTP_OK) return null
+
+            val body = conn.inputStream.bufferedReader().use { it.readText() }
+            SONG_ID_PATTERN.find(body)?.groupValues?.get(1)
+        } finally {
+            conn.disconnect()
+        }
+    }
+
     /**
      * 下载歌词响应。
      * @param musicId 歌曲 ID。

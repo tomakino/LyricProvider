@@ -24,7 +24,6 @@ object ObjectUtils {
         tag: String? = null,
         logLevel: Int = Log.DEBUG,
         prefix: List<String>? = null,
-        printList: Boolean = false // 保留参数，但逻辑已内建
     ) {
         if (obj == null) {
             logMessage(tag ?: TAG, logLevel, "Object is null")
@@ -68,7 +67,9 @@ object ObjectUtils {
             if (noArgMethods.isNotEmpty()) {
                 logMessage(logTag, logLevel, "║ No-argument Methods (${noArgMethods.size}):")
                 for (method in noArgMethods) {
-                    if (method.name.startsWith("access$")) continue
+                    if (method.name.startsWith("access$")
+                        || method.name == "getClass"
+                    ) continue
                     if (prefix != null && !prefix.any { method.name.startsWith(it) }) continue
 
                     method.isAccessible = true

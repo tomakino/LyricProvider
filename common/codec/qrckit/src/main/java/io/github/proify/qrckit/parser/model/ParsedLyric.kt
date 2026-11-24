@@ -35,6 +35,9 @@ data class ParsedLyric(
         val sourceLines = runCatching { QrcParser.parseXml(raw).firstOrNull()?.lines }
             .getOrNull()
             ?.takeIf { it.isNotEmpty() }
+            ?: runCatching { QrcParser.parseLyric(raw).second }
+                .getOrNull()
+                ?.takeIf { it.isNotEmpty() }
             ?: lyricsDocument.lines
 
         sourceLines.map { line ->

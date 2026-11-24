@@ -12,6 +12,7 @@ import android.app.Application
 import android.media.MediaMetadata
 import android.media.session.PlaybackState
 import com.highcapable.kavaref.KavaRef.Companion.resolve
+import com.highcapable.kavaref.extension.classOf
 import com.highcapable.yukihookapi.extension.kavaref.hook
 import com.highcapable.yukihookapi.extension.kavaref.toClass
 import com.highcapable.yukihookapi.hook.entity.YukiBaseHooker
@@ -104,6 +105,7 @@ object Bodian : YukiBaseHooker() {
             logo = ProviderLogo.fromSvg(Constants.ICON),
             processName = processName
         )
+        created.player.setDisplayTranslation(true)
         created.register()
         provider = created
 
@@ -117,7 +119,7 @@ object Bodian : YukiBaseHooker() {
         "android.media.session.MediaSession".toClass().resolve().apply {
             firstMethod {
                 name = "setPlaybackState"
-                parameters(PlaybackState::class.java)
+                parameters(classOf<PlaybackState>())
             }.hook {
                 after {
                     val state = args[0] as? PlaybackState ?: return@after
@@ -127,7 +129,7 @@ object Bodian : YukiBaseHooker() {
 
             firstMethod {
                 name = "setMetadata"
-                parameters(MediaMetadata::class.java)
+                parameters(classOf<MediaMetadata>())
             }.hook {
                 after {
                     val metadata = args[0] as? MediaMetadata ?: return@after

@@ -24,23 +24,45 @@ import io.github.proify.lyricon.qishuikit.api.QishuiLyricApi
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.time.Duration.Companion.milliseconds
 
+/**
+ * systemui 侧媒体会话监听器。
+ *
+ * 监听汽水的播放会话，把曲目与歌词注册为 Lyricon provider。
+ */
 object SystemUIMediaHooker : YukiBaseHooker() {
 
     private const val TAG = "LunaSystemUI"
     private const val TARGET_PACKAGE = "com.luna.music"
 
+    /** 已转换的歌词，按曲目 ID 缓存。 */
     private val songCache = ConcurrentHashMap<String, Song>()
-    private val controllers = ConcurrentHashMap<MediaSession.Token, MediaController>()
-    private val handler = Handler(Looper.getMainLooper())
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
+    /** 已注册回调的媒体控制器，按会话 Token 缓存。 */
+    private val controllers = ConcurrentHashMap<MediaSession.Token, MediaController>()
+
+    /** 会话回调分发线程。 */
+    private val handler = Handler(Looper.getMainLooper())
+
+    /** 网络与解析协程作用域。 */
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    /** 注册到 Lyricon 的 provider。 */
     private var provider: LyriconProvider? = null
+
+    /** 歌词接口客户端。 */
     private var kit: QishuiLyricApi? = null
+
+    /** 歌词磁盘缓存。 */
     private var cache: LyricCache? = null
+
+    @Volatile
+    private var pendingPauseJob: kotlinx.coroutines.Job? = null
 
     override fun onHook() {
         registerAppLifecycle(true) {
@@ -51,6 +73,10 @@ object SystemUIMediaHooker : YukiBaseHooker() {
         }
     }
 
+    /**
+     * 初始化歌词客户端、缓存、provider 与会话监听。
+     * @param context 宿主应用上下文。
+     */
     private fun init(context: Context) {
         kit = QishuiLyricApi()
         cache = LyricCache(context.applicationContext)
@@ -58,6 +84,10 @@ object SystemUIMediaHooker : YukiBaseHooker() {
         initSessionListener(context)
     }
 
+    /**
+     * 注册 Lyricon provider。
+     * @param context 宿主应用上下文。
+     */
     private fun initProvider(context: Context) {
         provider = LyriconFactory.createProvider(
             context = context,
@@ -72,6 +102,10 @@ object SystemUIMediaHooker : YukiBaseHooker() {
         YLog.info(tag = TAG, msg = "provider registered, process=$processName")
     }
 
+    /**
+     * 注册媒体会话监听。
+     * @param context 宿主应用上下文。
+     */
     private fun initSessionListener(context: Context) {
         val manager =
             context.getSystemService(Context.MEDIA_SESSION_SERVICE) as? MediaSessionManager
@@ -92,6 +126,10 @@ object SystemUIMediaHooker : YukiBaseHooker() {
         }
     }
 
+    /**
+     * 同步活跃会话，注册或释放控制器回调。
+     * @param list 当前活跃媒体控制器。
+     */
     private fun syncControllers(list: List<MediaController>) {
         val targets = list.filter { it.packageName == TARGET_PACKAGE }
         val tokens = targets.map { it.sessionToken }.toSet()
@@ -110,7 +148,28 @@ object SystemUIMediaHooker : YukiBaseHooker() {
                 }
 
                 override fun onPlaybackStateChanged(state: PlaybackState?) {
-                    state?.let { provider?.player?.setPlaybackState(it) }
+                    state?.let {
+
+                        fun deliverPlaybackState(state: PlaybackState) {
+                            provider?.player?.setPlaybackState(state)
+                        }
+
+                        if (state.state == PlaybackState.STATE_PLAYING) {
+                            pendingPauseJob?.cancel()
+                            pendingPauseJob = null
+
+                            deliverPlaybackState(state)
+                        } else {
+                            pendingPauseJob?.cancel()
+                            pendingPauseJob = scope.launch {
+                                delay(400.milliseconds)
+
+                                withContext(Dispatchers.Main) {
+                                    deliverPlaybackState(state)
+                                }
+                            }
+                        }
+                    }
                 }
 
                 override fun onSessionDestroyed() {
@@ -123,6 +182,10 @@ object SystemUIMediaHooker : YukiBaseHooker() {
         }
     }
 
+    /**
+     * 处理曲目元数据变化，解析歌词并下发。
+     * @param metadata 最新媒体元数据。
+     */
     private fun handleMetadata(metadata: MediaMetadata) {
         val id = metadata.getString(MediaMetadata.METADATA_KEY_MEDIA_ID) ?: return
         val title = metadata.getString(MediaMetadata.METADATA_KEY_TITLE)

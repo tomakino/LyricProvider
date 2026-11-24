@@ -8,54 +8,58 @@ package io.github.proify.lyricon.retromusicprovider.xposed
 import android.content.Context
 import android.media.MediaMetadata
 import android.media.session.PlaybackState
+import android.net.Uri
+import com.highcapable.yukihookapi.extension.kavaref.toClass
 import com.highcapable.yukihookapi.extension.kavaref.toClassOrNull
 import com.highcapable.yukihookapi.hook.entity.YukiBaseHooker
 import com.highcapable.yukihookapi.hook.log.YLog
+import com.kyant.taglib.TagLib
 import io.github.proify.extensions.android.Reflect
-import io.github.proify.extensions.toRichLyricLines
 import io.github.proify.lrckit.EnhanceLrcParser
+import io.github.proify.lyricon.lyric.model.RichLyricLine
 import io.github.proify.lyricon.lyric.model.Song
+import io.github.proify.lyricon.lyric.model.interfaces.ILyricLine
 import io.github.proify.lyricon.provider.LyriconFactory
 import io.github.proify.lyricon.provider.LyriconProvider
 import io.github.proify.lyricon.provider.ProviderLogo
 import java.io.File
+import java.lang.reflect.Method
 
 /**
- * Lyricon provider for Retro Music Player 6.6.x.
- * Using Heuristic Depth-2 Memory Dump & Direct File I/O Bypass.
+ * Lyricon provider for Retro Music Player 7.0.x.
  */
 object RetroMusic : YukiBaseHooker() {
     private const val TAG = Constants.LOG_TAG
     private const val MUSIC_SERVICE = "code.name.monkey.retromusic.service.MusicService"
     private const val RETRO_SONG = "code.name.monkey.retromusic.model.Song"
-    private const val LYRIC_UTIL = "code.name.monkey.retromusic.util.LyricUtil"
 
     private var provider: LyriconProvider? = null
-    private var lastSongKey: String? = null
-    private var lastLyricsSongKey: String? = null
-    private var lastNoLyricsSongKey: String? = null
+
+    private var currentMediaID: Long? = null
+
+    private var lastSong: Song? = null
 
     private var musicServiceInstance: Any? = null
 
+    private val lyricTagRegex by lazy { Regex("(?i)\\bLYRICS\\b") }
+
     override fun onHook() {
-        YLog.info(tag = TAG, msg = "Starting Retro Music provider (Heuristic Depth-2 Mode)")
+        YLog.info(tag = TAG, msg = "Starting Retro Music provider")
 
         registerAppLifecycle(true) {
             onCreate { initProvider(this) }
-            onTerminate {
-                provider?.unregister()
-                provider = null
-                lastSongKey = null
-                lastLyricsSongKey = null
-                lastNoLyricsSongKey = null
-                musicServiceInstance = null
-            }
         }
 
-        hookRetroMusicService()
-        hookMediaSession()
+        hookMusicService()
+        hookTrackChange()
+        hookPlaybackState()
+        hookMediaMetadata()
     }
 
+    /**
+     * 注册 Lyricon provider。
+     * @param context 宿主应用上下文。
+     */
     private fun initProvider(context: Context) {
         provider = LyriconFactory.createProvider(
             context = context,
@@ -66,224 +70,349 @@ object RetroMusic : YukiBaseHooker() {
         YLog.info(tag = TAG, msg = "Lyricon provider registered")
     }
 
-    private fun hookRetroMusicService() {
-        val serviceClass = MUSIC_SERVICE.toClassOrNull() ?: return
-        serviceClass.declaredMethods.firstOrNull { it.name == "onCreate" }?.hook {
-            after { musicServiceInstance = instance }
+    /**
+     * 捕获 MusicService 实例。
+     */
+    private fun hookMusicService() {
+        val serviceClass = MUSIC_SERVICE.toClassOrNull()
+
+        if (serviceClass == null) {
+            YLog.error(tag = TAG, msg = "MusicService class not found")
+            return
         }
-        serviceClass.declaredMethods.firstOrNull { it.name == "onStartCommand" }?.hook {
-            after { musicServiceInstance = instance }
+
+        val method = serviceClass.declaredMethods.firstOrNull {
+            it.name == "onCreate" && it.parameterTypes.isEmpty()
+        }
+
+        if (method == null) {
+            YLog.error(tag = TAG, msg = "MusicService.onCreate not found")
+            return
+        }
+
+        method.hook {
+            after {
+                musicServiceInstance = instance
+                YLog.debug(tag = TAG, msg = "MusicService instance captured")
+            }
         }
     }
 
-    private fun hookMediaSession() {
-        try {
-            val mediaSessionClass = Class.forName("android.media.session.MediaSession")
-            mediaSessionClass.declaredMethods.firstOrNull {
-                it.name == "setPlaybackState" && it.parameterTypes.size == 1 && it.parameterTypes[0] == PlaybackState::class.java
-            }?.hook {
-                after {
-                    val state = args[0] as? PlaybackState ?: return@after
-                    provider?.player?.setPlaybackState(state)
-                }
-            }
+    /**
+     * 监听播放状态并转发给 Lyricon。
+     */
+    private fun hookPlaybackState() {
+        val method = "android.media.session.MediaSession".toClass().declaredMethods.firstOrNull {
+            it.name == "setPlaybackState" &&
+                it.parameterTypes.size == 1 &&
+                it.parameterTypes[0] == PlaybackState::class.java
+        }
 
-            mediaSessionClass.declaredMethods.firstOrNull { it.name == "setMetadata" }?.hook {
-                after {
-                    val success = forceUpdateFromServiceInstance()
-                    if (!success) {
-                        val metadata = args[0] as? MediaMetadata
-                        if (metadata != null) fallbackToMediaMetadata(metadata)
-                    }
+        if (method == null) {
+            YLog.error(tag = TAG, msg = "MediaSession.setPlaybackState not found")
+            return
+        }
+
+        method.hook {
+            after {
+                val state = args[0] as? PlaybackState
+
+                if (state == null) {
+                    YLog.debug(tag = TAG, msg = "playback state argument is null")
+                    return@after
                 }
+
+                provider?.player?.setPlaybackState(state)
             }
-        } catch (e: Throwable) {
-            YLog.error(tag = TAG, msg = "Failed to hook MediaSession", e = e)
         }
     }
 
-    private fun forceUpdateFromServiceInstance(): Boolean {
-        val service = musicServiceInstance ?: return false
-        val songClass = RETRO_SONG.toClassOrNull() ?: return false
+    /**
+     * 监听切歌协程的创建，在控制层切歌时立即更新歌词。
+     */
+    private fun hookTrackChange() {
+        val coroutineClass = "code.name.monkey.retromusic.service.MusicService\$playSongAt\$1".toClassOrNull()
 
-        try {
-            var currentClass: Class<*>? = service.javaClass
-            val checkedInstances = mutableSetOf<Int>()
+        if (coroutineClass == null) {
+            YLog.error(tag = TAG, msg = "playSongAt coroutine class not found")
+            return
+        }
 
-            while (currentClass != null && currentClass != Any::class.java) {
-                for (field in currentClass.declaredFields) {
-                    if (field.type.isPrimitive || field.type.isArray || field.type.name.startsWith("java.")) continue
-                    field.isAccessible = true
-                    val engineObj = field.get(service) ?: continue
-                    if (!checkedInstances.add(System.identityHashCode(engineObj))) continue
+        val constructor = coroutineClass.declaredConstructors.firstOrNull {
+            it.parameterTypes.size == 3 && it.parameterTypes[1] == Int::class.javaPrimitiveType
+        }
 
-                    var engineClass: Class<*>? = engineObj.javaClass
-                    while (engineClass != null && engineClass != Any::class.java) {
-                        val songField =
-                            engineClass.declaredFields.firstOrNull { it.type == songClass }
-                        if (songField != null) {
-                            songField.isAccessible = true
-                            val song = songField.get(engineObj)
-                            if (song != null) {
-                                updateCurrentSongFromRetro(song)
-                                return true
-                            }
-                        }
-                        engineClass = engineClass.superclass
-                    }
+        if (constructor == null) {
+            YLog.error(tag = TAG, msg = "playSongAt constructor not found")
+            return
+        }
+
+        constructor.hook {
+            before {
+                val position = args[1] as? Int
+
+                if (position == null) {
+                    YLog.debug(tag = TAG, msg = "track change position is null")
+                } else {
+                    updateSongAt(position)
                 }
-                currentClass = currentClass.superclass
             }
-            return false
-        } catch (e: Throwable) {
-            return false
         }
     }
 
-    private fun fallbackToMediaMetadata(metadata: MediaMetadata) {
-        val title = metadata.getString(MediaMetadata.METADATA_KEY_TITLE)
-        val artist = metadata.getString(MediaMetadata.METADATA_KEY_ARTIST) ?: "Unknown Artist"
-        val duration = metadata.getLong(MediaMetadata.METADATA_KEY_DURATION)
+    /**
+     * 按队列位置取曲目并更新歌词。
+     * @param position 队列位置。
+     */
+    private fun updateSongAt(position: Int) {
+        val service = musicServiceInstance
 
-        if (title.isNullOrBlank()) return
+        if (service == null) {
+            YLog.debug(tag = TAG, msg = "service instance not captured yet")
+            return
+        }
 
-        val songKey = "FALLBACK|$title|$artist|$duration"
-        if (songKey == lastSongKey) return
-        lastSongKey = songKey
-        lastLyricsSongKey = null
-        lastNoLyricsSongKey = null
+        val songClass = RETRO_SONG.toClassOrNull()
 
-        provider?.player?.setSong(
-            Song(
-                id = title.hashCode().toString(),
-                name = title,
-                artist = artist,
-                duration = duration
+        if (songClass == null) {
+            YLog.error(tag = TAG, msg = "Retro Song class not found")
+            return
+        }
+
+        val getSongAt = findGetSongAt(service.javaClass, songClass)
+
+        if (getSongAt == null) {
+            YLog.error(tag = TAG, msg = "getSongAt method not found")
+            return
+        }
+
+        val retroSong = runCatching { getSongAt.invoke(service, position) }.getOrNull()
+
+        if (retroSong == null) {
+            YLog.debug(tag = TAG, msg = "song unavailable at " + position)
+            return
+        }
+
+        updateSongFromRetro(retroSong)
+    }
+
+    /**
+     * 监听媒体元数据，作为切歌时的触发与兜底。
+     */
+    private fun hookMediaMetadata() {
+        val method = "android.media.session.MediaSession".toClass().declaredMethods.firstOrNull {
+            it.name == "setMetadata" &&
+                it.parameterTypes.size == 1 &&
+                it.parameterTypes[0] == MediaMetadata::class.java
+        }
+
+        if (method == null) {
+            YLog.error(tag = TAG, msg = "MediaSession.setMetadata not found")
+            return
+        }
+
+        method.hook {
+            after {
+                val metadata = args[0] as? MediaMetadata
+
+                if (metadata == null) {
+                    YLog.debug(tag = TAG, msg = "metadata argument is null")
+                    return@after
+                }
+
+                if (currentMediaID != null) return@after
+
+                fallbackToMediaMetadata(metadata)
+            }
+        }
+    }
+
+
+    /**
+     * 按签名 `(int) -> Song` 定位取歌方法，避免依赖混淆后的方法名。
+     * @param serviceClass MusicService 类型。
+     * @param songClass 曲目类型。
+     * @return 匹配的方法；未找到时为 null。
+     */
+    private fun findGetSongAt(serviceClass: Class<*>, songClass: Class<*>): Method? =
+        serviceClass.declaredMethods.firstOrNull {
+            it.returnType == songClass &&
+                it.parameterTypes.size == 1 &&
+                it.parameterTypes[0] == Int::class.javaPrimitiveType
+        }
+
+    /**
+     * 把歌词行转换为富歌词行，不携带不可序列化的元数据。
+     * @param lines 歌词行。
+     * @return 富歌词行。
+     */
+    private fun toRichLines(lines: List<ILyricLine>): List<RichLyricLine> =
+        lines.map { line ->
+            RichLyricLine(
+                begin = line.begin,
+                end = line.end,
+                duration = line.duration,
+                text = line.text,
+                words = line.words,
+                isAlignedRight = line.isAlignedRight
             )
-        )
-    }
+        }
 
-    private fun updateCurrentSongFromRetro(retroSong: Any) {
+    /**
+     * 从 Retro 曲目读取信息并下发歌词。
+     * @param retroSong Retro Song 实例。
+     * @return 成功下发歌词时为 true。
+     */
+    private fun updateSongFromRetro(retroSong: Any): Boolean {
         try {
             val id = getLong(retroSong, "getId")
-            val title = getString(retroSong, "getTitle") ?: getString(retroSong, "title")
-            val artist = getString(retroSong, "getArtistName") ?: getString(retroSong, "artistName")
+
+            if (id == 0L) {
+                YLog.debug(tag = TAG, msg = "song id unavailable")
+                return false
+            }
+
+            if (id == currentMediaID) {
+                YLog.info(tag = TAG, msg = "same song id=" + id + ", skip")
+                return true
+            }
+
+            currentMediaID = id
+
+            val title = call(retroSong, "getTitle")
+            val artist = call(retroSong, "getArtistName")
             val duration = getLong(retroSong, "getDuration")
-            val data = getString(retroSong, "getData") ?: getString(retroSong, "data")
+            val data = call(retroSong, "getData")
 
-            if (id == -1L || title.isNullOrBlank()) return
-
-            val songKey = "$id|$title|$artist|$duration|$data"
-            if (songKey != lastSongKey) {
-                lastSongKey = songKey
-                lastLyricsSongKey = null
-                lastNoLyricsSongKey = null
-                provider?.player?.setSong(
-                    Song(
-                        id = id.toString(),
-                        name = title,
-                        artist = artist,
-                        duration = duration
-                    )
-                )
-                YLog.info(tag = TAG, msg = "Current song: $title - $artist")
-            } else if (songKey == lastLyricsSongKey) {
-                return
+            if (data.isNullOrBlank()) {
+                YLog.debug(tag = TAG, msg = "song data path missing, id=" + id)
+                return false
             }
 
-            val rawLyrics = loadRetroMusicLyrics(retroSong, data)
+            val uri = if (data.startsWith("content://")) Uri.parse(data) else Uri.fromFile(File(data))
+            val rawLyrics = fetchLyricFromTag(uri)
+
             if (rawLyrics.isNullOrBlank()) {
-                if (songKey != lastNoLyricsSongKey) {
-                    lastNoLyricsSongKey = songKey
-                    YLog.info(tag = TAG, msg = "No local/embedded lyrics: $title - $artist")
-                }
-                return
+                YLog.debug(tag = TAG, msg = "no embedded lyrics, id=" + id)
+                return false
             }
 
-            val document = EnhanceLrcParser.parse(rawLyrics, duration)
-            val lines = document.lines.filter { !it.text.isNullOrBlank() }
-            if (lines.isNotEmpty()) {
-                provider?.player?.setSong(
-                    Song(
-                        id = id.toString(),
-                        name = title,
-                        artist = artist,
-                        duration = duration,
-                        lyrics = lines.toRichLyricLines()
-                    )
-                )
-                lastLyricsSongKey = songKey
-                YLog.info(tag = TAG, msg = "Lyrics loaded: $title - $artist (${lines.size} lines)")
+            val lines = EnhanceLrcParser.parse(rawLyrics, duration).lines
+                .filter { !it.text.isNullOrBlank() }
+
+            if (lines.isEmpty()) {
+                YLog.info(tag = TAG, msg = "lyric tag parsed empty, id=" + id)
+                return false
             }
+
+            setSong(
+                Song(
+                    id = id.toString(),
+                    name = title,
+                    artist = artist,
+                    duration = duration,
+                    lyrics = toRichLines(lines)
+                )
+            )
+
+            YLog.info(
+                tag = TAG,
+                msg = "lyrics loaded: " + title + " - " + artist + " (" + lines.size + " lines)"
+            )
+
+            return true
         } catch (e: Throwable) {
             YLog.error(tag = TAG, msg = "Failed to update Retro Music song", e = e)
         }
+        return false
     }
 
-    private fun loadRetroMusicLyrics(song: Any, audioPath: String?): String? {
-        // 1. 尝试使用反射读取内嵌歌词（可能被混淆）
-        try {
-            val embedded = getString(song, "getEmbeddedSyncedLyrics")
-            if (!embedded.isNullOrBlank()) return embedded
-        } catch (e: Throwable) {
+    /**
+     * 以媒体元数据兜底，仅下发歌名与歌手。
+     * @param metadata 当前媒体元数据。
+     */
+    private fun fallbackToMediaMetadata(metadata: MediaMetadata) {
+        val title = metadata.getString(MediaMetadata.METADATA_KEY_TITLE)
+        val artist = metadata.getString(MediaMetadata.METADATA_KEY_ARTIST) ?: "Unknown Artist"
+
+        if (title.isNullOrBlank()) {
+            YLog.debug(tag = TAG, msg = "metadata title missing, skip fallback")
+            return
         }
 
-        // 2. 尝试使用反射获取歌词文件（可能被混淆）
-        try {
-            val songClass = RETRO_SONG.toClassOrNull()
-            val utilClass = LYRIC_UTIL.toClassOrNull() ?: "${LYRIC_UTIL}Kt".toClassOrNull()
-            if (songClass != null && utilClass != null) {
-                val isSingleton = utilClass.declaredFields.any { it.name == "INSTANCE" }
-                val invokeInstance = if (isSingleton) utilClass.getDeclaredField("INSTANCE")
-                    .apply { isAccessible = true }.get(null) else null
-                val syncedFileMethod =
-                    utilClass.declaredMethods.firstOrNull { it.name == "getSyncedLyricsFile" && it.parameterTypes.size == 1 && it.parameterTypes[0] == songClass }
-                val syncedFile = syncedFileMethod?.apply { isAccessible = true }
-                    ?.invoke(invokeInstance, song) as? File
-                if (syncedFile?.isFile == true) return syncedFile.readText(Charsets.UTF_8)
-            }
-        } catch (e: Throwable) {
+        YLog.debug(tag = TAG, msg = "fallback metadata: " + title)
+        setSong(Song(name = title, artist = artist))
+    }
+
+    /**
+     * 下发歌词，重复内容不重复发送。
+     * @param song 待下发曲目。
+     */
+    private fun setSong(song: Song) {
+        if (lastSong == song) {
+            YLog.debug(tag = TAG, msg = "same song, skip dispatch")
+            return
         }
 
-        // 3. 【终极绝杀】：无视代码混淆，直接通过文件绝对路径硬读同级目录的 .lrc 歌词文件！
-        if (!audioPath.isNullOrBlank()) {
-            try {
-                val audioFile = File(audioPath)
-                val parent = audioFile.parentFile
-                val baseName = audioFile.nameWithoutExtension
+        lastSong = song
+        provider?.player?.setSong(song)
+        YLog.debug(tag = TAG, msg = "push: " + song.name)
+    }
 
-                if (parent != null && parent.exists()) {
-                    // 同时兼容 .lrc, .LRC 甚至 .txt 后缀
-                    val candidates = listOf(
-                        File(parent, "$baseName.lrc"),
-                        File(parent, "$baseName.LRC"),
-                        File(parent, "$baseName.txt")
-                    )
+    /**
+     * 读取音频文件中的内嵌歌词标签。
+     * @param uri 音频文件 URI。
+     * @return 歌词文本；读取失败或没有标签时为 null。
+     */
+    private fun fetchLyricFromTag(uri: Uri): String? {
+        val resolver = hostApplication?.contentResolver
 
-                    for (lrcFile in candidates) {
-                        if (lrcFile.exists() && lrcFile.isFile) {
-                            YLog.info(
-                                tag = TAG,
-                                msg = "Bypass Success: Directly read physical file -> ${lrcFile.absolutePath}"
-                            )
-                            return lrcFile.readText(Charsets.UTF_8)
-                        }
-                    }
+        if (resolver == null) {
+            YLog.error(tag = TAG, msg = "application context unavailable")
+            return null
+        }
+
+        return try {
+            resolver.openFileDescriptor(uri, "r")?.use { pfd ->
+                val metadata = TagLib.getMetadata(pfd.dup().detachFd())
+
+                if (metadata == null) {
+                    YLog.debug(tag = TAG, msg = "no metadata in " + uri)
+                    return@use null
                 }
-            } catch (e: Throwable) {
-                YLog.error(tag = TAG, msg = "Direct File I/O Failed", e = e)
-            }
-        }
 
-        return null
+                val value = metadata.propertyMap.entries
+                    .firstOrNull { (key, _) -> lyricTagRegex.matches(key) }
+                    ?.value
+                    ?.firstOrNull()
+
+                if (value.isNullOrBlank()) {
+                    YLog.debug(tag = TAG, msg = "no lyrics tag in " + uri)
+                }
+
+                value
+            }
+        } catch (e: Exception) {
+            YLog.error(tag = TAG, msg = "read lyric tag failed: " + uri, e = e)
+            null
+        }
     }
 
-    private fun callFileMethod(obj: Any, getter: String): File? =
-        Reflect.callOrNull(obj, getter) as? File
-
-    private fun getString(obj: Any, getter: String): String? =
+    /**
+     * 反射调用无参方法并转为字符串。
+     * @param obj 目标对象。
+     * @param getter 方法名。
+     * @return 调用结果；失败时为 null。
+     */
+    private fun call(obj: Any, getter: String): String? =
         Reflect.callOrNull(obj, getter)?.toString()
 
+    /**
+     * 反射调用无参方法并转为数值。
+     * @param obj 目标对象。
+     * @param getter 方法名。
+     * @return 调用结果；失败时为 0。
+     */
     private fun getLong(obj: Any, getter: String): Long =
         (Reflect.callOrNull(obj, getter) as? Number)?.toLong() ?: 0L
 }

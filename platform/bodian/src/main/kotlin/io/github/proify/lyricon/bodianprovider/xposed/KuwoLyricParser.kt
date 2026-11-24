@@ -163,8 +163,25 @@ object KuwoLyricParser {
 
         val absolute = wordTimesAreAbsolute(parsed)
 
-        return parsed.mapIndexed { index, line ->
-            val nextBegin = parsed.getOrNull(index + 1)?.begin
+        // 翻译行的时间戳是下一条原文的开始，所以按顺序归到它之前最近的一条原文
+        val translations = HashMap<ParsedLine, String>()
+        var previousMain: ParsedLine? = null
+
+        for (line in parsed) {
+            if (line.isTranslation) {
+                if (previousMain != null && line.text.isNotBlank()) {
+                    translations[previousMain] = line.text.trim()
+                }
+            } else {
+                previousMain = line
+            }
+        }
+
+        val mains = parsed.filter { !it.isTranslation }
+
+        return mains.mapIndexed { index, line ->
+            val translation = translations[line]
+            val nextBegin = mains.getOrNull(index + 1)?.begin
             val shift = if (absolute) 0L else line.begin
 
             val words = line.words.mapNotNull { word ->
@@ -193,7 +210,8 @@ object KuwoLyricParser {
                 end = end,
                 duration = end - line.begin,
                 text = line.text,
-                words = words
+                words = words,
+                translation = translation
             )
         }
     }
@@ -266,6 +284,12 @@ object KuwoLyricParser {
         var charStart: Int = 0,
         var charEnd: Int = 0
     )
+
+    /**
+     * 翻译行：没有任何逐字时间（标签全为 0）。
+     */
+    private val ParsedLine.isTranslation: Boolean
+        get() = words.isEmpty() || words.all { it.begin == 0L && it.end == 0L }
 
     private class ParsedLine(
         val begin: Long,

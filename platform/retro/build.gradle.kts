@@ -22,4 +22,5 @@ android {
 dependencies {
     implementation(project(":common:base:extensions-android"))
     implementation(project(":common:codec:lrckit"))
+    implementation(libs.taglib)
 }
