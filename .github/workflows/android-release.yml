@@ -108,9 +108,7 @@ jobs:
           fi
 
           for apk in "${APK_FILES[@]}"; do
-            module="$(awk -F/ '{for(i=1;i<=NF;i++) if($i=="build"){print $(i-2) "/" $(i-1); exit}}' <<< "$apk")"
-            module="${module//\//_}"
-            destination="collected-apks/${module}-$(basename "$apk")"
+            destination="collected-apks/$(basename "$apk")"
             if [[ -e "$destination" ]]; then
               echo "::error::APK 目标文件名重复：$destination"
               exit 1
