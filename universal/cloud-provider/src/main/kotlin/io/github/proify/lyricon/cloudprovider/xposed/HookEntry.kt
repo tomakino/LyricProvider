@@ -12,8 +12,7 @@ import com.highcapable.yukihookapi.hook.xposed.YukiHookXposedModule
 
 @YukiHookLibXposedEntry(
     targetApiVersion = 101,
-    scope = arrayOf("cn.kuwo.player"),
-    staticScope = true
+    staticScope = false
 )
 open class HookEntry : YukiHookXposedModule {
 
@@ -27,7 +26,6 @@ open class HookEntry : YukiHookXposedModule {
     override fun onInit() {
         YukiHook.configure {
             logging {
-                Config.enabled = true
                 tag = "CloudProvider "
             }
         }

@@ -59,11 +59,10 @@
 - [QZ Music](https://github.com/lqtmcstudio/QZMusic)
 - [棉花音乐](https://github.com/pure-music/PureMusic)
 - [Salt Player](https://moriafly.com/saltplayer/)
-- [MD3Music**](https://github.com/zzyoxml/md3Music)
+- [MD3Music](https://github.com/zzyoxml/md3Music)
 - [NeriPlayer](https://github.com/cwuom/NeriPlayer)
 
 #### 已适配了但没有你的播放器？请[提交 issue](https://github.com/tomakino/LyricProvider/issues)。
-
    
 ---
 
