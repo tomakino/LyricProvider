@@ -25,10 +25,13 @@ import io.github.proify.lyricon.provider.LyriconProvider
 import io.github.proify.lyricon.provider.ProviderLogo
 import kotlinx.serialization.json.Json
 
-object SPlayerLyricProvider : YukiBaseHooker() {
-    private const val TAG = "SPlayerProvider"
-    private const val INJECTED_JS =
-        $$"(function(){if(window.__slpLyrics)return;window.__slpLyrics=true;var i=setInterval(function(){try{var a=document.querySelector('#app');if(!a||!a.__vue_app__)return;var p=a.__vue_app__.config.globalProperties['$pinia'];if(!p)return;var m=p._s.get('music');if(!m)return;var l=JSON.stringify(m.songLyric.lrcData??[]);var y=JSON.stringify(m.songLyric.yrcData??[]);var c=l+y;if(c!==window.__slpLast&&c!=='[][]'){window.__slpLast=c;if(typeof Capacitor!=='undefined'&&Capacitor.Plugins&&Capacitor.Plugins.AndroidNativePlayback){Capacitor.Plugins.AndroidNativePlayback.updateFloatingLyricData({lrcData:l,yrcData:y});}}}catch(e){}},2000);})();"
+abstract class SPlayerLyricProvider : YukiBaseHooker() {
+    companion object {
+        private const val TAG = "SPlayerProvider"
+        private const val INJECTED_JS =
+            $$"(function(){if(window.__slpLyrics)return;window.__slpLyrics=true;var i=setInterval(function(){try{var a=document.querySelector('#app');if(!a||!a.__vue_app__)return;var p=a.__vue_app__.config.globalProperties['$pinia'];if(!p)return;var m=p._s.get('music');if(!m)return;var l=JSON.stringify(m.songLyric.lrcData??[]);var y=JSON.stringify(m.songLyric.yrcData??[]);var c=l+y;if(c!==window.__slpLast&&c!=='[][]'){window.__slpLast=c;if(typeof Capacitor!=='undefined'&&Capacitor.Plugins&&Capacitor.Plugins.AndroidNativePlayback){Capacitor.Plugins.AndroidNativePlayback.updateFloatingLyricData({lrcData:l,yrcData:y});}}}catch(e){}},2000);})();"
+    }
+
     private var provider: LyriconProvider? = null
     private val json = Json { ignoreUnknownKeys = true; coerceInputValues = true }
 
@@ -36,6 +39,8 @@ object SPlayerLyricProvider : YukiBaseHooker() {
     private var currentArtist = ""
     private var titleField: java.lang.reflect.Field? = null
     private var artistField: java.lang.reflect.Field? = null
+
+    abstract fun getPlaybackManager(): String
 
     override fun onHook() {
         YLog.debug(tag = TAG, msg = "正在注入进程: $processName")
@@ -45,7 +50,7 @@ object SPlayerLyricProvider : YukiBaseHooker() {
                 val created = LyriconFactory.createProvider(
                     context = this,
                     providerPackageName = Constants.PROVIDER_PACKAGE_NAME,
-                    playerPackageName = Constants.MUSIC_PACKAGE_NAME,
+                    playerPackageName = packageName,
                     logo = ProviderLogo.fromSvg(Constants.ICON),
                 )
                 provider = created
@@ -57,7 +62,7 @@ object SPlayerLyricProvider : YukiBaseHooker() {
 
         injectLyricsJs()
 
-        "top.imsyy.splayer.android.playback.PlaybackManager".toClass().resolve().apply {
+        getPlaybackManager().toClass().resolve().apply {
             firstMethod {
                 name = "updateFloatingLyricSongInfo"
                 parameters(classOf<String>(), classOf<String>())
@@ -92,7 +97,7 @@ object SPlayerLyricProvider : YukiBaseHooker() {
 
             firstMethod {
                 name = "updateMetadata"
-                parameters($$"top.imsyy.splayer.android.playback.PlaybackManager$TrackMetadata".toClass())
+                parameters($$"$${getPlaybackManager()}$TrackMetadata".toClass())
             }.hook {
                 after {
                     val metadata = args[0] ?: return@after

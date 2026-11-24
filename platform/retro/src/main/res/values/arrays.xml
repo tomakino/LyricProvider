@@ -1,6 +1,3 @@
 <resources>
-    <string-array name="xposed_scope">
-        <item>code.name.monkey.retromusic</item>
-    </string-array>
     <string-array name="lyricon_module_tags" />
 </resources>

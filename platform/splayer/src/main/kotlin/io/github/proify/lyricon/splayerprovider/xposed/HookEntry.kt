@@ -12,14 +12,18 @@ import com.highcapable.yukihookapi.hook.xposed.YukiHookXposedModule
 
 @YukiHookLibXposedEntry(
     targetApiVersion = 101,
-    scope = ["top.imsyy.splayer.android"],
+    scope = [
+        "top.imsyy.splayer.android",
+    ],
     staticScope = true
 )
 open class HookEntry : YukiHookXposedModule {
 
     override fun onHook() {
         YukiHook.encase {
-            loadApp(Constants.MUSIC_PACKAGE_NAME, SPlayerLyricProvider)
+            loadApp("top.imsyy.splayer.android", object : SPlayerLyricProvider() {
+                override fun getPlaybackManager(): String = "$packageName.playback.PlaybackManager"
+            })
         }
     }
 
