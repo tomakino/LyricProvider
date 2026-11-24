@@ -11,6 +11,10 @@ on:
           - release
         default: release
         required: true
+      nightly:
+        description: '发布夜版（独立 Pre-release）'
+        type: boolean
+        default: false
 
 jobs:
   build-and-release:
@@ -19,7 +23,7 @@ jobs:
 
     timeout-minutes: 45
     permissions:
-      contents: read
+      contents: write
 
     concurrency:
       group: lyricprovider-${{ github.ref }}-${{ inputs.build-type || 'release' }}
@@ -132,6 +136,29 @@ jobs:
           archive: true
           compression-level: 6
           retention-days: 90
+
+      - name: 生成夜版标记
+        if: ${{ inputs.nightly }}
+        id: stamp
+        run: |
+          set -euo pipefail
+          echo "tag=$(date -u +%Y%m%d-%H%M)" >> "$GITHUB_OUTPUT"
+          echo "label=$(date -u +'%Y-%m-%d %H:%M')" >> "$GITHUB_OUTPUT"
+
+      - name: 发布夜版
+        if: ${{ inputs.nightly }}
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: nightly-${{ steps.stamp.outputs.tag }}
+          name: Nightly ${{ steps.stamp.outputs.label }}
+          body: |
+            commit: ${{ github.sha }}
+            type: ${{ env.BUILD_TYPE }}
+          prerelease: true
+          files: collected-apks/*.apk
+          fail_on_unmatched_files: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: 清理
         if: always()
