@@ -61,6 +61,8 @@
 - [Salt Player](https://moriafly.com/saltplayer/)
 - [MD3Music](https://github.com/zzyoxml/md3Music)
 - [NeriPlayer](https://github.com/cwuom/NeriPlayer)
+- [流声音乐](https://github.com/bileizhen/CurrentMusicX)
+- [CPPlayer](https://github.com/Aurora-Nasa-1/CPPlayer-KMP)
 
 #### 已适配了但没有你的播放器？请[提交 issue](https://github.com/tomakino/LyricProvider/issues)。
    

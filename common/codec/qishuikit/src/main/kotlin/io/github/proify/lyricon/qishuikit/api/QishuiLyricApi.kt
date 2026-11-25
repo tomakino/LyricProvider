@@ -8,6 +8,7 @@ package io.github.proify.lyricon.qishuikit.api
 
 import io.github.proify.lyricon.qishuikit.model.QishuiH5Response
 import io.github.proify.lyricon.qishuikit.model.QishuiLyric
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -33,34 +34,39 @@ class QishuiLyricApi(
      * @return 歌词数据；请求失败、响应不成功或缺少歌词时为 null。
      */
     suspend fun fetch(trackId: String): QishuiLyric? = withContext(Dispatchers.IO) {
-        val request = Request.Builder()
-            .url(endpoint.format(trackId))
-            .header("User-Agent", USER_AGENT)
-            .get()
-            .build()
+        try {
+            val request = Request.Builder()
+                .url(endpoint.format(trackId))
+                .header("User-Agent", USER_AGENT)
+                .get()
+                .build()
 
-        val body = client.newCall(request).execute().use { response ->
-            if (!response.isSuccessful) return@withContext null
-            response.body.string()
+            val body = client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) return@withContext null
+                response.body.string()
+            }
+
+            val parsed = json.decodeFromString<QishuiH5Response>(body)
+            val lyric = parsed.lyric ?: return@withContext null
+            val content = lyric.content ?: return@withContext null
+            val track = parsed.seoTrack?.track
+
+            QishuiLyric(
+                id = trackId,
+                name = track?.name,
+                artist = track?.artists?.joinToString(", ") { it.name.orEmpty() },
+                duration = track?.duration ?: 0L,
+                type = lyric.type ?: "krc",
+                content = content,
+                langTranslations = lyric.langTranslations,
+                translations = lyric.translations
+            )
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            null
         }
-
-        val parsed = json.decodeFromString<QishuiH5Response>(body)
-        val lyric = parsed.lyric ?: return@withContext null
-        val content = lyric.content ?: return@withContext null
-        val track = parsed.seoTrack?.track
-
-        QishuiLyric(
-            id = trackId,
-            name = track?.name,
-            artist = track?.artists?.joinToString(", ") { it.name.orEmpty() },
-            duration = track?.duration ?: 0L,
-            type = lyric.type ?: "krc",
-            content = content,
-            langTranslations = lyric.langTranslations,
-            translations = lyric.translations
-        )
     }
-
     private companion object {
         /** 默认歌词接口地址模板。 */
         const val DEFAULT_ENDPOINT =
