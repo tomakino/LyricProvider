@@ -1,5 +1,5 @@
 /*
- * Copyright 2026 Tomakino
+ * Copyright 2026 Proify, Tomakino
  * Licensed under the Apache License, Version 2.0
  * http://www.apache.org/licenses/LICENSE-2.0
  */
@@ -25,6 +25,6 @@ dependencies {
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.lyricon.lyric.model)
-
+    implementation(libs.okhttp)
     testImplementation(kotlin("test"))
 }

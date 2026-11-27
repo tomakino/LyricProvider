@@ -57,7 +57,7 @@ jobs:
           cache-cleanup: on-success
 
       - name: 解码并校验证书
-        if: ${{ env.BUILD_TYPE == 'release' }}
+        #if: ${{ env.BUILD_TYPE == 'release' }}
         env:
           SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
           KEY_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}

@@ -4,14 +4,17 @@
  * http://www.apache.org/licenses/LICENSE-2.0
  */
 
+@file:Suppress("DestructuringDeclaration")
+
 package io.github.proify.lyricon.amprovider.xposed.credentials
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.util.Base64
+import android.content.pm.PackageInfo
+import android.os.Build
 import com.highcapable.yukihookapi.hook.log.YLog
-import io.github.proify.amkit.download.LyricsCredentials
 import io.github.proify.extensions.android.content.pm.versionCodeCompat
+import io.github.proify.lyricon.amprovider.xposed.api.lyric.LyricsCredentials
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.io.File
@@ -33,19 +36,23 @@ object CredentialsStore {
     private const val APPLE_DOMAIN = "apple.com"
     private const val DSID_COOKIE = "X-Dsid"
     private const val DEFAULT_STOREFRONT = "us"
+    private const val COOKIE_SEPARATOR = "; "
 
-    private const val TOKEN_EXPIRY_MARGIN_MS = 5 * 60 * 1000L
+    private val json = Json {
+        ignoreUnknownKeys = true
+        isLenient = true
+    }
 
-    private val json = Json { ignoreUnknownKeys = true; isLenient = true }
-
-    @Volatile
     private var context: Context? = null
 
     @Volatile
-    private var cached: LyricsCredentials? = null
+    private var storefrontCache: String? = null
 
     @Volatile
-    private var storefront: String? = null
+    private var userAgentCache: String? = null
+
+    @Volatile
+    private var packageInfoCache: PackageInfo? = null
 
     private val developerTokenReader: DeveloperTokenReader by lazy {
         DeveloperTokenReaders.create(versionCode())
@@ -53,86 +60,95 @@ object CredentialsStore {
 
     fun initialize(appContext: Context) {
         if (context != null) return
-        context = appContext
+        context = appContext.applicationContext
     }
 
     fun storefront(): String {
-        storefront?.let { return it }
+        storefrontCache?.let { return it }
         val resolved = runCatching {
             val bag = json.decodeFromString<BagConfig>(
                 File(requireContext().filesDir, BAG_FILE).readText()
             )
-            bag.countryCode?.takeIf { it.length == 2 }?.lowercase()
+            bag.countryCode
+                ?.takeIf { it.length == 2 && it.all(Char::isLetter) }
+                ?.lowercase()
         }.getOrNull() ?: DEFAULT_STOREFRONT
-        storefront = resolved
+        storefrontCache = resolved
         return resolved
     }
 
-    fun credentials(): LyricsCredentials? {
-        // 缓存的 token 到期后必须重新读取，否则进程长时间运行会全部 404
-        cached?.let {
-            if (!isTokenExpired(it.developerToken)) return it
-            YLog.error("developerToken 已过期，重新读取")
-            cached = null
+    fun userAgent(): String? {
+        userAgentCache?.let { return it }
+
+        val pkg = packageInfo() ?: return null
+        val versionName = pkg.versionName?.takeIf { it.isNotBlank() } ?: return null
+        val release = Build.VERSION.RELEASE?.takeIf { it.isNotBlank() } ?: return null
+
+        val ua = buildString {
+            append("Music/").append(versionName)
+            append(" Android/").append(release)
+            Build.MODEL?.takeIf { it.isNotBlank() }
+                ?.let { append(" model/").append(it) }
+            (Build.BRAND ?: Build.MANUFACTURER)?.takeIf { it.isNotBlank() }
+                ?.let { append(" brand/").append(it) }
+            append(" build/").append(pkg.versionCodeCompat)
+            append(" (dt:66)")
         }
+        userAgentCache = ua
+        return ua
+    }
+
+    fun credentials(): LyricsCredentials? {
         val ctx = context ?: return null
 
         val token = developerTokenReader.read(ctx) ?: run {
             YLog.error(tag = "Credentials", msg = "developerToken 读取失败")
             return null
         }
-        // YLog.info("token=${token.take(16)}...${token.takeLast(4)}")
+
         val cookies = readCookies(ctx)
         if (cookies.isEmpty()) {
             YLog.error(tag = "Credentials", msg = "Cookie 为空")
             return null
         }
 
-        val dsid = cookies[DSID_COOKIE]
-        val cookieHeader = cookies.entries.joinToString("; ") { "${it.key}=${it.value}" }
+        val cookieHeader = cookies.entries.joinToString(COOKIE_SEPARATOR) {
+            "${it.key}=${it.value}"
+        }
 
         return LyricsCredentials(
             developerToken = token,
             cookie = cookieHeader,
-            dsid = dsid,
+            dsid = cookies[DSID_COOKIE],
             userToken = null,
         ).also {
-            cached = it
             YLog.debug(
                 tag = "Credentials",
-                msg = "ready token=${token.length}字节 cookie=${cookies.size}项 dsid=*** " +
+                msg = "ready token=${token.length}字符 cookie=${cookies.size}项 dsid=*** " +
                         "storefront=${storefront()}"
             )
         }
     }
 
-    private fun versionCode() = runCatching {
-        val ctx = requireContext()
-        ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionCodeCompat
-    }.getOrDefault(0)
+    private fun packageInfo(): PackageInfo? =
+        packageInfoCache ?: runCatching {
+            val ctx = requireContext()
+            ctx.packageManager.getPackageInfo(ctx.packageName, 0)
+        }.getOrNull()?.also { packageInfoCache = it }
 
-    /** JWT 的 `exp` 早于当前时间 + 5 分钟即视为过期。 */
-    private fun isTokenExpired(token: String): Boolean = runCatching {
-        val payload = token.split('.').getOrNull(1) ?: return false
-        val json = String(
-            Base64.decode(
-                payload,
-                Base64.URL_SAFE or Base64.NO_PADDING
-            ),
-            Charsets.UTF_8,
-        )
-        val exp = Regex(""""exp"\s*:\s*(\d+)""").find(json)?.groupValues?.getOrNull(1)?.toLong()
-            ?: return false
-        exp * 1000L <= System.currentTimeMillis() + TOKEN_EXPIRY_MARGIN_MS
-    }.getOrDefault(false)
+    private fun versionCode(): Long = packageInfo()?.versionCodeCompat ?: 0
 
     private fun readCookies(context: Context): Map<String, String> = runCatching {
         val table = json.decodeFromString<CookieTable>(
             File(context.filesDir, COOKIES_FILE).readText()
         )
-        table.cookies
-            .filter { isAppleDomain(it.domain) && !it.name.isNullOrBlank() }
-            .associate { it.name!! to (it.value ?: "") }
+        buildMap {
+            for (cookie in table.cookies) {
+                val name = cookie.name?.takeIf { it.isNotBlank() } ?: continue
+                if (!isAppleDomain(cookie.domain)) continue
+                put(name, cookie.value ?: "")
+            }
+        }
     }.getOrElse {
         YLog.error(tag = "Credentials", msg = "读取 Cookie 失败", e = it)
         emptyMap()

@@ -29,6 +29,7 @@
             <option value="$PROJECT_DIR$/common/base/dexkit" />
             <option value="$PROJECT_DIR$/common/base/extensions-android" />
             <option value="$PROJECT_DIR$/common/base/extensions-kt" />
+            <option value="$PROJECT_DIR$/common/base/okhttp-hooker" />
             <option value="$PROJECT_DIR$/common/codec" />
             <option value="$PROJECT_DIR$/common/codec/amkit" />
             <option value="$PROJECT_DIR$/common/codec/krckit" />

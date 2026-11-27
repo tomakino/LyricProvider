@@ -26,9 +26,6 @@ open class HookEntry : YukiHookXposedModule {
 
         loadApp(packageName, LXMusic("$packageName.lyric.LyricModule"))
 
-//        loadApp("cn.toside.music.mobile", LXMusic())
-//        loadApp("com.ikunshare.music.mobile", IKunMusic())
-//        loadApp("com.lxnetease.music.mobile", LxNetease())
     }
 
     override fun onInit() {

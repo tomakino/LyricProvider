@@ -1,3 +1,9 @@
+/*
+ * Copyright 2026 Proify, Tomakino
+ * Licensed under the Apache License, Version 2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
+ */
+
 plugins {
     id("lyricon.android.application")
     id("lyricon.yukihook")
@@ -14,6 +20,8 @@ android {
 }
 
 dependencies {
+    implementation(project(":common:base:okhttp-hooker"))
+
     implementation(project(":common:base:extensions-android"))
     implementation(project(":common:codec:amkit"))
     implementation(libs.okhttp)

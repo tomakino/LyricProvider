@@ -13,5 +13,5 @@ android {
 }
 
 dependencies {
-    implementation(libs.dexkit)
+    api(libs.dexkit)
 }

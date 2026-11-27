@@ -7,9 +7,9 @@
 package io.github.proify.lyricon.amprovider.xposed
 
 import com.highcapable.yukihookapi.hook.log.YLog
-import io.github.proify.amkit.download.AppleMusicLyricsDownloader
-import io.github.proify.amkit.parser.TtmlLyricsParser
-import io.github.proify.amkit.parser.toSong
+import io.github.proify.amkit.ttmlparser.TtmlLyricsParser
+import io.github.proify.amkit.ttmlparser.toSong
+import io.github.proify.lyricon.amprovider.xposed.api.lyric.AppleMusicLyricsDownloader
 import io.github.proify.lyricon.amprovider.xposed.cache.LyricDiskCache
 import io.github.proify.lyricon.amprovider.xposed.cache.MediaMetadataCache
 import io.github.proify.lyricon.amprovider.xposed.credentials.CredentialsStore
@@ -60,8 +60,10 @@ internal object LyricDownloader {
         val storefront = CredentialsStore.storefront()
 
         return runCatching {
-            val ttml = AppleMusicLyricsDownloader(credentials = credentials)
-                .download(adamId, storefront)
+            val ttml = AppleMusicLyricsDownloader(
+                credentials = credentials,
+                userAgent = CredentialsStore.userAgent().orEmpty(),
+            ).download(adamId, storefront)
 
             val metadata = MediaMetadataCache.get(adamId)
             ttmlLyricsParser.parse(ttml).toSong(
