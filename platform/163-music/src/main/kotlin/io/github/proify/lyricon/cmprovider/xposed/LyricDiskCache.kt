@@ -31,7 +31,7 @@ internal object LyricDiskCache {
         if (!file.isFile) return@runCatching null
 
         json.decodeFromString<Song>(
-            file.readBytes().deflate().toString(Charsets.UTF_8)
+            file.readBytes().inflate().toString(Charsets.UTF_8)
         )
     }.onFailure {
         YLog.warn(tag = TAG, msg = "Lyric cache read failed: $id", e = it)
@@ -42,7 +42,7 @@ internal object LyricDiskCache {
             val file = fileOf(id) ?: return@runCatching
             file.parentFile?.mkdirs()
             file.writeBytes(
-                json.encodeToString(song).toByteArray().inflate()
+                json.encodeToString(song).toByteArray().deflate()
             )
         }.onFailure {
             YLog.warn(tag = TAG, msg = "Lyric cache write failed: $id", e = it)
