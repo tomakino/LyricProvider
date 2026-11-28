@@ -26,4 +26,7 @@ dependencies {
     implementation(project(":common:codec:amkit"))
     implementation(libs.okhttp)
     implementation(libs.kotlinx.coroutines.core)
+
+    testImplementation(kotlin("test"))
+    testImplementation(libs.kotlinx.coroutines.core)
 }

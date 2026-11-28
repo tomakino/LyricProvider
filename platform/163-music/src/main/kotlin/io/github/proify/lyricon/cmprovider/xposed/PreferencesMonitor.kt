@@ -39,7 +39,7 @@ internal class PreferencesMonitor(
             method = findPreferenceMethod(dexkit)
         }
         preferenceMethod = method
-        YLog.debug("Preference capability query completed in ${elapsed}ms")
+        YLog.debug("Preference capability query completed in ${elapsed}ms, method=$method")
     }
 
     /** 绑定宿主 ClassLoader 并回调当前状态。 */

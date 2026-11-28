@@ -70,10 +70,10 @@ fun LyricsDocument.toSong(
 
 
 /**
- * 复刻宿主 `PlayerLyricsViewModel` 的逐行对齐推演（`x.s0`）。
+ * 对唱分列：复刻宿主 `PlayerLyricsViewModel` 的逐行对齐推演（`x.s0`）。
  *
- * 首行由 agent 类型决定：`person` 右、`group` 左；同一 agent 连续沿用；
- * 换人时按前后行的文本空/非空状态决定是否换边，因此对唱歌词会随演唱者交替。
+ * 首行按 agent 类型给初始边（`person` 左、`group` 右）；同一 agent 连续沿用；
+ * 换人时按前后行文本空/非空决定是否换边；`group` 行恒为默认边，不打断后续推演。
  * 没有出现右对齐时返回空集（宿主同样不启用分列）。
  */
 private fun rightAlignedIndices(
@@ -92,14 +92,7 @@ private fun rightAlignedIndices(
         val agentId = agentIds[index]
         if (agentId.isNullOrBlank()) continue
 
-        alignment[index] = resolveAlignment(
-            index = index,
-            agentId = agentId,
-            agents = agents,
-            agentIds = agentIds,
-            lines = lines,
-            alignment = alignment,
-        )
+        alignment[index] = resolveAlignment(index, agentId, agents, agentIds, lines, alignment)
         if (alignment[index] == ALIGN_RIGHT) hasRight = true
     }
 
@@ -117,8 +110,6 @@ private fun resolveAlignment(
 ): Int {
     val type = agents.firstOrNull { it.id == agentId }?.type
 
-    // 宿主的 `lineId` 从 1 开始；回溯到 0 时按类型给初始边。
-    // 探针实测：Person 首行算出的 textAlignment 是 5（宿主内部 5=左、6=右）。
     if (index < 0) {
         return when {
             type == null -> ALIGN_DEFAULT
@@ -127,7 +118,8 @@ private fun resolveAlignment(
             else -> ALIGN_DEFAULT
         }
     }
-    if (type.equals("group", ignoreCase = true)) return ALIGN_LEFT
+    // 宿主的 `s0`：group 行恒为默认边，后续行回溯时跳过它
+    if (type.equals("group", ignoreCase = true)) return ALIGN_DEFAULT
 
     val previous = if (index > 0) alignment[index - 1] else ALIGN_DEFAULT
     if (previous == ALIGN_DEFAULT) {
@@ -143,6 +135,10 @@ private fun resolveAlignment(
         if (previousBlank != currentBlank) ALIGN_RIGHT else ALIGN_LEFT
     }
 }
+
+private const val ALIGN_DEFAULT = 1
+private const val ALIGN_LEFT = 5
+private const val ALIGN_RIGHT = 6
 
 /** 词序列是否带完整的逐词时间。 */
 private fun List<LyricsWord>.hasCompleteTiming(): Boolean =
@@ -162,7 +158,3 @@ fun LyricsWord.toLyricWord(): LyricWord {
         end = end,
     )
 }
-
-private const val ALIGN_DEFAULT = 1
-private const val ALIGN_LEFT = 5
-private const val ALIGN_RIGHT = 6

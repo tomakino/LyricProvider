@@ -18,7 +18,7 @@ import java.util.Locale
 /** 歌词磁盘缓存：deflate JSON，按语言分目录。 */
 object LyricDiskCache {
 
-    private const val CACHE_VERSION = 1
+    private const val CACHE_VERSION = 2
 
     private var baseDir: File? = null
 
