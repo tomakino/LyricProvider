@@ -82,9 +82,9 @@
 
 我们非常欢迎社区提交 Pull Request 来适配更多音乐 App。
 
-请阅读 [开发文档](https://tomakino.github.io/lyricon/zh-cn/developer/provider/)
+请阅读 [开发文档](https://github.com/tomakino/lyricon-api)
 
-或者 [订阅歌词](https://tomakino.github.io/lyricon/zh-cn/developer/subscriber/)
+[开发文档（旧版本）](https://tomakino.github.io/lyricon/zh-cn/developer/subscriber/)
 
 ---
 
