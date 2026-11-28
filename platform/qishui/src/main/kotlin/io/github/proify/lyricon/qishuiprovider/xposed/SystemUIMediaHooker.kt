@@ -162,7 +162,7 @@ object SystemUIMediaHooker : YukiBaseHooker() {
                         } else {
                             pendingPauseJob?.cancel()
                             pendingPauseJob = scope.launch {
-                                delay(400.milliseconds)
+                                delay(100.milliseconds)
 
                                 withContext(Dispatchers.Main) {
                                     deliverPlaybackState(state)
